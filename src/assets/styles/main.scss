@@ -1,0 +1,34 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #app {
+  height: 100%;
+}
+
+body {
+  font-family: $font-ui;
+  background: $color-bg;
+  color: $color-text;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+  font-family: $font-ui;
+  border: none;
+  background: none;
+}
+
+input, textarea, select {
+  font-family: $font-ui;
+}
+
+a {
+  color: inherit;
+}
