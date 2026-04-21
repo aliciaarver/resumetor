@@ -132,7 +132,7 @@ File (PDF)
 
 ### `utils/socialLinks.ts`
 
-Нормализация и отображение социальных ссылок. Набор типов: `Email | LinkedIn | Telegram | GitHub | Link`. `buildSocialLinkHref` выбирает схему (`mailto:` для Email, `https://` по умолчанию). Пропускает значение с любой уже префиксованной схемой — см. известные отклонения.
+Нормализация и отображение социальных ссылок. Набор типов: `Email | LinkedIn | Telegram | GitHub | Link`. `buildSocialLinkHref` выбирает схему (`mailto:` для Email, `https://` по умолчанию) и пропускает только allow-list безопасных протоколов (`http:`, `https:`, `mailto:`, `tel:`); всё остальное (`javascript:`, `data:`, `vbscript:`, `file:` и т.п.) сбрасывается в пустую строку, включая обфускации с управляющими символами в схеме.
 
 ### `components/preview/`
 
@@ -166,7 +166,6 @@ File (PDF)
 - `BuilderView.vue` совмещает page/widget/feature (ADR-0001 требует разделения).
 - Тестов нет (отсутствует Vitest, фикстур-корпус из `docs/testing-strategy.md`).
 - Нет ESLint / Prettier / CI / precommit-хуков.
-- `buildSocialLinkHref` пропускает любую схему вида `^[a-z]+:` — open-redirect/XSS-вектор через `<a :href>` в превью.
 - `ModernResumePreview.vue` существует, но нигде не используется.
 - Ссылки в `README.md` и `docs/README.md` — абсолютные локальные пути с глифом `⛤`, не рабочие ни в гит-хостинге, ни на текущей машине (каталог теперь `xopa/`).
 

@@ -18,17 +18,35 @@ export function normalizeSocialLink(link: SocialLink): SocialLink {
   }
 }
 
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:'])
+
+const SCHEME_PATTERN = /^([a-z][a-z0-9+\-.]*):/i
+
+function extractUrlProtocol(url: string): string | null {
+  // Браузеры игнорируют управляющие символы в схеме (напр. `java\tscript:`),
+  // поэтому вычищаем их до проверки, иначе allow-list можно обойти.
+  const sanitized = url.replace(/[\u0000-\u001F\u007F]/g, '').trim()
+  const match = SCHEME_PATTERN.exec(sanitized)
+  return match ? `${match[1].toLowerCase()}:` : null
+}
+
 export function buildSocialLinkHref(link: Pick<SocialLink, 'label' | 'url'>): string {
   const url = link.url.trim()
   const label = normalizeSocialLinkLabel(link.label)
 
   if (!url) return ''
 
-  if (label === 'Email' && !/^[a-z]+:/i.test(url)) {
+  const protocol = extractUrlProtocol(url)
+
+  if (protocol && !SAFE_URL_PROTOCOLS.has(protocol)) {
+    return ''
+  }
+
+  if (label === 'Email' && !protocol) {
     return `mailto:${url}`
   }
 
-  if (!/^[a-z]+:/i.test(url)) {
+  if (!protocol) {
     return `https://${url}`
   }
 
