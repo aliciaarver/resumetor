@@ -41,35 +41,48 @@ components/
   pdf/        PdfMetadataPanel
   ui/         AppButton, AppInput, AppTextarea, AppMonthField
 composables/
-  useResumeParser.ts            ← оркестрация парсинга PDF
+  useResumeParser.ts            ← тонкая обёртка над use-case
   usePdfExport.ts               ← html2canvas + jsPDF
   useResumePreviewModel.ts
+features/upload-resume/
+  lib/
+    pdf-extraction/          ← Stage 1: File → ExtractedPdfDocument
+    normalization/           ← Stage 2: → NormalizedDocument (+stripFooterLines)
+    profile-detection/       ← Stage 3: → ParserProfileDetectionResult
+    section-classification/  ← Stage 4: → ClassifiedDocument
+    entity-extraction/       ← Stage 5: → ExtractedResumeDraft
+    confidence-scoring/      ← Stage 6: → ParseReview
+    shared/                  ← regexes, aliases, language-maps, dates, heuristics, text-utils
+  model/
+    parse-resume-from-pdf.use-case.ts       ← оркестратор 7 стадий
+    apply-confidence-fallback.use-case.ts   ← Stage 7: fallback decision
 entities/resume/
-  model/  types, factories, normalize, confidence
+  model/  types, factories, normalize, confidence (ParseBlockMetrics + ResumeBlockKey)
   lib/    selectors
   index.ts (barrel)
 stores/    resume, locale, pdfMeta
 types/     resume (реэкспорт), i18n
-utils/     parseTextToResume, pdfTextNormalizer, pagination, parseDiff,
+utils/     pdfTextNormalizer, pagination, parseDiff,
            parserFeatureFlags, socialLinks, dateHelpers, performanceBudget,
            pdfMetaDefaults, resumeTemplates, demoResume
 assets/styles/  variables.scss, mixins.scss (глобально доступны)
 ```
 
-Целевая FSD-раскладка описана в `docs/adr/0001-architecture-boundaries-and-shared-pagination.md` (`app / pages / widgets / features / entities / shared`). Из неё выполнен только слой `entities/resume/*`. Миграция `utils/` и `views/` в `features/*` и `widgets/*` — в долге.
+Целевая FSD-раскладка описана в `docs/adr/0001-architecture-boundaries-and-shared-pagination.md` (`app / pages / widgets / features / entities / shared`). Реализованы слои `entities/resume/*` и `features/upload-resume/*` (7 стадий парсера + use-case). Миграция `views/` в `widgets/*` и прочие `utils/` — в долге.
 
 ### Поток данных
 
 ```
 File (PDF)
-  └─ ResumeUploader → useResumeParser.parseFile
-       ├─ extractPdfData (pdfjs-dist, lazy)
-       │     normalizePdfPageText(items, width)
-       │     extractHeaderPersonalInfo (аннотации + верхняя 25% страницы)
-       │     extractPdfMetadata (Title/Author/Subject/Keywords)
-       ├─ parseTextToResumeDetailed  ← секции + сущности + метрики
-       ├─ buildPersonalMetrics / toConfidenceLevel / buildConfidenceNote
-       ├─ applyConfidenceFallback   ← блоки с confidence=low не импортируются
+  └─ ResumeUploader → useResumeParser.parseFile → parseResumeFromPdf (use-case)
+       ├─ pdf-extraction        → ExtractedPdfDocument (pageTexts + annotationLinks + metadata)
+       ├─ normalization         → NormalizedDocument (rawText + lines, stripFooterLines)
+       ├─ profile-detection     → ParserProfileDetectionResult ('hh_ru' | 'en_cv' | 'generic')
+       ├─ section-classification → ClassifiedDocument (sectionBuckets + explicitSectionBuckets)
+       ├─ entity-extraction     → ExtractedResumeDraft (Partial<ResumeData>)
+       ├─ (merge annotation links)
+       ├─ confidence-scoring    → ParseReview (blocks + hasWarnings)
+       ├─ apply-confidence-fallback  ← блоки с confidence=low не импортируются
        └─ buildParsedPdfMeta
          ↓
          ResumeStore.hydrateFromParsed  +  PdfMetaStore.hydrateFromParsed
@@ -93,15 +106,13 @@ File (PDF)
 
 ## 4. Ключевые модули
 
-### `utils/parseTextToResume.ts`
+### `features/upload-resume/`
 
-Эвристический парсер текста, извлечённого из PDF. Определяет профиль источника и раскладывает текст по секциям резюме.
+Парсер резюме разнесён по 7 стадиям pipeline (см. `docs/parser-pipeline.md`). Каждая стадия — отдельный модуль с явным входным/выходным контрактом; стадии соединяет use-case `model/parse-resume-from-pdf.use-case.ts`, а `model/apply-confidence-fallback.use-case.ts` отвечает за Stage 7 (fallback decision).
 
-- **Реальные профили в коде:** `ParserProfile = 'hh_ru' | 'en_cv' | 'generic'` (см. `detectParserProfile`).
+- **Реальные профили в коде:** `ParserProfile = 'hh_ru' | 'en_cv' | 'generic'` (`lib/profile-detection`).
 - **Что декларирует `docs/parser-pipeline.md`:** `single-column` / `two-column` / `dense-corporate` / `job-board-export`. Это рассинхрон доки и кода — один из источников правды устарел, решение тех-лида.
-- Входной контракт — список нормализованных строк; выход — `ResumeData` + метрики confidence по блокам.
-
-Файл монолитный. `docs/parser-pipeline.md` описывает разбивку на 7 стадий с отдельными контрактами — миграция запланирована, но пока не выполнена.
+- Shared-helpers (regexes, aliases, dates, heuristics, text-utils, language-maps) лежат в `lib/shared/` и потребляются стадиями явными именованными импортами.
 
 ### `utils/pdfTextNormalizer.ts`
 
@@ -113,7 +124,7 @@ File (PDF)
 
 ### `composables/useResumeParser.ts`
 
-Оркестрирует парсинг: читает PDF через `pdfjs-dist`, тянет аннотации и метаданные, вызывает парсер, формирует confidence-note. На пути pdfjs-аннотаций используется `any` для объектов `pdf` / `annotation` — сознательное временное решение.
+Тонкая обёртка над `features/upload-resume/model/parse-resume-from-pdf.use-case.ts` для Vue-стороны: держит ref-ы `parsing`/`error`, достаёт локаль и локализатор из стора и переводит исключения в сообщения. На пути pdfjs-аннотаций в `lib/pdf-extraction` используется `any` для объектов `pdf` / `annotation` — сознательное временное решение.
 
 ### `composables/usePdfExport.ts`
 
@@ -151,7 +162,6 @@ File (PDF)
 Этот раздел — короткий маркерный список; детали и задачи живут в `.tech-lead-history/*.md` и в трекере.
 
 - Профили парсера в коде (`hh_ru` / `en_cv` / `generic`) не совпадают с `docs/parser-pipeline.md`.
-- `utils/parseTextToResume.ts` — монолит, не разбит по стадиям из `docs/parser-pipeline.md`.
 - `stores/locale.ts` содержит полный словарь Ru/En и доменные мэпперы — противоречит «тонкому стору» из ADR-0001.
 - `BuilderView.vue` совмещает page/widget/feature (ADR-0001 требует разделения).
 - Тестов нет (отсутствует Vitest, фикстур-корпус из `docs/testing-strategy.md`).
