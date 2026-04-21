@@ -1,7 +1,21 @@
 import type { ResumeData } from '@/entities/resume/model/types'
-import type { ParseBlockMetrics, ResumeBlockKey } from '@/utils/parseTextToResume'
 
 export type ParseConfidenceLevel = 'high' | 'medium' | 'low' | 'missing'
+
+export type ResumeBlockKey =
+  | 'personal'
+  | 'aboutMe'
+  | 'workExperience'
+  | 'education'
+  | 'skills'
+  | 'languages'
+  | 'projects'
+
+export interface ParseBlockMetrics {
+  score: number
+  rawText: string
+  extractedCount: number
+}
 
 export function buildPersonalMetrics(
   personal: ResumeData['personal'] | undefined,

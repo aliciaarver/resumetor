@@ -1,5 +1,5 @@
 import type { ResumeData } from '@/types/resume'
-import type { ResumeBlockKey } from '@/utils/parseTextToResume'
+import type { ResumeBlockKey } from '@/entities/resume/model/confidence'
 
 export interface ParseDiffBlock {
   key: ResumeBlockKey
