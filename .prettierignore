@@ -1,0 +1,12 @@
+dist
+node_modules
+coverage
+.ai-cache
+.tech-lead-history
+.pm-history
+.pm-dismissed.json
+PM.md
+public
+package-lock.json
+*.min.js
+*.min.css

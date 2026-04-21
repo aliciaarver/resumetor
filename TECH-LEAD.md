@@ -10,21 +10,23 @@ SPA-конструктор резюме. Полностью клиентский
 
 ## 2. Стек
 
-| Слой | Выбор |
-| --- | --- |
-| Язык | TypeScript 5.9 (strict, `noUnusedLocals`, `noUnusedParameters`, `noUncheckedSideEffectImports`, `erasableSyntaxOnly`, `noFallthroughCasesInSwitch`) |
-| Фреймворк | Vue 3.5 (Composition API, `<script setup lang="ts">`) |
-| Сборщик | Vite 8 + `@vitejs/plugin-vue` |
-| Стейт | Pinia 3 (setup-style сторы) |
-| Роутер | vue-router 4 (одна страница `/`) |
-| Утилиты | `@vueuse/core` 14 (`useLocalStorage`, `useResizeObserver`) |
-| PDF ввод | `pdfjs-dist` 5 (ленивый `import()`, исключён из `optimizeDeps`) |
-| PDF вывод | `html2canvas` 1.4 + `jspdf` 4 (растровый экспорт) |
-| Стили | SCSS, глобально подмешиваются `variables` и `mixins` через `vite.config.ts` |
-| Алиасы | `@/*` → `src/*` |
-| Type-check при сборке | `vue-tsc -b` перед `vite build` |
+| Слой                  | Выбор                                                                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Язык                  | TypeScript 5.9 (strict, `noUnusedLocals`, `noUnusedParameters`, `noUncheckedSideEffectImports`, `erasableSyntaxOnly`, `noFallthroughCasesInSwitch`) |
+| Фреймворк             | Vue 3.5 (Composition API, `<script setup lang="ts">`)                                                                                               |
+| Сборщик               | Vite 8 + `@vitejs/plugin-vue`                                                                                                                       |
+| Стейт                 | Pinia 3 (setup-style сторы)                                                                                                                         |
+| Роутер                | vue-router 4 (одна страница `/`)                                                                                                                    |
+| Утилиты               | `@vueuse/core` 14 (`useLocalStorage`, `useResizeObserver`)                                                                                          |
+| PDF ввод              | `pdfjs-dist` 5 (ленивый `import()`, исключён из `optimizeDeps`)                                                                                     |
+| PDF вывод             | `html2canvas` 1.4 + `jspdf` 4 (растровый экспорт)                                                                                                   |
+| Стили                 | SCSS, глобально подмешиваются `variables` и `mixins` через `vite.config.ts`                                                                         |
+| Алиасы                | `@/*` → `src/*`                                                                                                                                     |
+| Type-check при сборке | `vue-tsc -b` перед `vite build`                                                                                                                     |
 
-Не подключено: ESLint, Prettier, stylelint, Vitest, Playwright, precommit-хуки, CI.
+Подключено: ESLint 9 (flat config, `eslint-plugin-vue`, `typescript-eslint`, `eslint-plugin-import`), Prettier 3, pre-commit через `simple-git-hooks` + `lint-staged`, GitHub Actions CI (install → lint + format:check → typecheck → build).
+
+Не подключено: stylelint, Vitest, Playwright.
 
 ## 3. Архитектура
 
@@ -155,7 +157,6 @@ File (PDF)
 - `stores/locale.ts` содержит полный словарь Ru/En и доменные мэпперы — противоречит «тонкому стору» из ADR-0001.
 - `BuilderView.vue` совмещает page/widget/feature (ADR-0001 требует разделения).
 - Тестов нет (отсутствует Vitest, фикстур-корпус из `docs/testing-strategy.md`).
-- Нет ESLint / Prettier / CI / precommit-хуков.
 - `buildSocialLinkHref` пропускает любую схему вида `^[a-z]+:` — open-redirect/XSS-вектор через `<a :href>` в превью.
 - `ModernResumePreview.vue` существует, но нигде не используется.
 - Ссылки в `README.md` и `docs/README.md` — абсолютные локальные пути с глифом `⛤`, не рабочие ни в гит-хостинге, ни на текущей машине (каталог теперь `xopa/`).
