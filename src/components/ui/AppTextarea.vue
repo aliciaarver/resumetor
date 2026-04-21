@@ -19,12 +19,15 @@ import { useId } from 'vue'
 defineOptions({ inheritAttrs: false })
 const textareaId = useId()
 
-withDefaults(defineProps<{
-  modelValue: string
-  label?: string
-  placeholder?: string
-  rows?: number
-}>(), { rows: 4 })
+withDefaults(
+  defineProps<{
+    modelValue: string
+    label?: string
+    placeholder?: string
+    rows?: number
+  }>(),
+  { rows: 4 },
+)
 defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 

@@ -1,10 +1,21 @@
 <template>
-  <div class="resume modern-resume" ref="el" role="document" :aria-label="t('preview.documentLabel')">
+  <div
+    class="resume modern-resume"
+    ref="el"
+    role="document"
+    :aria-label="t('preview.documentLabel')"
+  >
     <header class="modern-resume__header" data-page-block data-page-block-kind="header">
       <div class="modern-resume__header-main">
         <h1 class="modern-resume__name">{{ fullName || t('preview.yourName') }}</h1>
-        <p v-if="data.personal.position" class="modern-resume__role">{{ data.personal.position }}</p>
-        <p v-if="data.aboutMe" class="modern-resume__summary" v-html="renderTextWithLinks(data.aboutMe)"></p>
+        <p v-if="data.personal.position" class="modern-resume__role">
+          {{ data.personal.position }}
+        </p>
+        <p
+          v-if="data.aboutMe"
+          class="modern-resume__summary"
+          v-html="renderTextWithLinks(data.aboutMe)"
+        ></p>
       </div>
       <aside class="modern-resume__sidebar">
         <div v-if="data.personal.photo" class="modern-resume__photo-wrap">
@@ -12,21 +23,39 @@
         </div>
 
         <div
-          v-if="data.personal.location || data.personal.citizenship || data.personal.birthDate || data.personal.workFormats.length"
+          v-if="
+            data.personal.location ||
+            data.personal.citizenship ||
+            data.personal.birthDate ||
+            data.personal.workFormats.length
+          "
           class="modern-resume__meta-block"
         >
           <h2 class="modern-resume__meta-title">{{ t('preview.profile') }}</h2>
-          <p v-if="data.personal.location" class="modern-resume__meta-line">{{ data.personal.location }}</p>
-          <p v-if="data.personal.citizenship" class="modern-resume__meta-line">{{ data.personal.citizenship }}</p>
-          <p v-if="data.personal.birthDate" class="modern-resume__meta-line">{{ data.personal.birthDate }}</p>
+          <p v-if="data.personal.location" class="modern-resume__meta-line">
+            {{ data.personal.location }}
+          </p>
+          <p v-if="data.personal.citizenship" class="modern-resume__meta-line">
+            {{ data.personal.citizenship }}
+          </p>
+          <p v-if="data.personal.birthDate" class="modern-resume__meta-line">
+            {{ data.personal.birthDate }}
+          </p>
           <div v-if="data.personal.workFormats.length" class="modern-resume__chips">
-            <span v-for="format in data.personal.workFormats" :key="format" class="modern-resume__chip">{{ format }}</span>
+            <span
+              v-for="format in data.personal.workFormats"
+              :key="format"
+              class="modern-resume__chip"
+              >{{ format }}</span
+            >
           </div>
         </div>
 
         <div v-if="data.personal.phone || contactLinks.length" class="modern-resume__meta-block">
           <h2 class="modern-resume__meta-title">{{ t('preview.contacts') }}</h2>
-          <p v-if="data.personal.phone" class="modern-resume__meta-line">{{ data.personal.phone }}</p>
+          <p v-if="data.personal.phone" class="modern-resume__meta-line">
+            {{ data.personal.phone }}
+          </p>
           <template v-for="link in contactLinks" :key="link.id">
             <a
               v-if="link.href"
@@ -34,23 +63,37 @@
               class="modern-resume__meta-line modern-resume__meta-link"
               target="_blank"
               rel="noreferrer"
-            >{{ link.text }}</a>
+              >{{ link.text }}</a
+            >
             <p v-else class="modern-resume__meta-line">{{ link.text }}</p>
           </template>
         </div>
 
-        <div v-if="data.skills.length" class="modern-resume__meta-block" data-page-block data-page-block-kind="item">
+        <div
+          v-if="data.skills.length"
+          class="modern-resume__meta-block"
+          data-page-block
+          data-page-block-kind="item"
+        >
           <h2 class="modern-resume__meta-title">{{ t('preview.skills') }}</h2>
           <div class="modern-resume__chips">
-            <span v-for="skill in data.skills" :key="skill.id" class="modern-resume__chip">{{ skill.name }}</span>
+            <span v-for="skill in data.skills" :key="skill.id" class="modern-resume__chip">{{
+              skill.name
+            }}</span>
           </div>
         </div>
 
-        <div v-if="data.languages.length" class="modern-resume__meta-block" data-page-block data-page-block-kind="item">
+        <div
+          v-if="data.languages.length"
+          class="modern-resume__meta-block"
+          data-page-block
+          data-page-block-kind="item"
+        >
           <h2 class="modern-resume__meta-title">{{ t('preview.languages') }}</h2>
           <div class="modern-resume__meta-stack">
             <p v-for="lang in data.languages" :key="lang.id" class="modern-resume__meta-line">
-              {{ lang.name }}<span v-if="lang.proficiency"> · {{ proficiencyLabel(lang.proficiency) }}</span>
+              {{ lang.name
+              }}<span v-if="lang.proficiency"> · {{ proficiencyLabel(lang.proficiency) }}</span>
             </p>
           </div>
         </div>
@@ -70,7 +113,9 @@
         data-page-block-kind="item"
       >
         <div class="modern-resume__entry-side">
-          <p class="modern-resume__dates">{{ formatDateRange(exp.fromMonth, exp.toMonth, exp.isCurrent) }}</p>
+          <p class="modern-resume__dates">
+            {{ formatDateRange(exp.fromMonth, exp.toMonth, exp.isCurrent) }}
+          </p>
         </div>
         <div class="modern-resume__entry-main">
           <div class="modern-resume__entry-heading">
@@ -80,14 +125,24 @@
               class="modern-resume__entry-title modern-resume__entry-link"
               target="_blank"
               rel="noreferrer"
-            >{{ exp.company }}</a>
+              >{{ exp.company }}</a
+            >
             <span v-else class="modern-resume__entry-title">{{ exp.company }}</span>
             <p v-if="exp.position" class="modern-resume__entry-subtitle">{{ exp.position }}</p>
           </div>
           <div v-if="exp.skills.length" class="modern-resume__chips modern-resume__entry-chips">
-            <span v-for="skill in exp.skills" :key="`${exp.id}-${skill}`" class="modern-resume__chip">{{ skill }}</span>
+            <span
+              v-for="skill in exp.skills"
+              :key="`${exp.id}-${skill}`"
+              class="modern-resume__chip"
+              >{{ skill }}</span
+            >
           </div>
-          <p v-if="exp.description" class="modern-resume__entry-description" v-html="renderTextWithLinks(exp.description)"></p>
+          <p
+            v-if="exp.description"
+            class="modern-resume__entry-description"
+            v-html="renderTextWithLinks(exp.description)"
+          ></p>
         </div>
       </article>
     </section>
@@ -105,11 +160,15 @@
         data-page-block-kind="item"
       >
         <div class="modern-resume__entry-side">
-          <p class="modern-resume__dates">{{ formatDateRange(edu.fromMonth, edu.toMonth, edu.isCurrent) }}</p>
+          <p class="modern-resume__dates">
+            {{ formatDateRange(edu.fromMonth, edu.toMonth, edu.isCurrent) }}
+          </p>
         </div>
         <div class="modern-resume__entry-main">
           <p class="modern-resume__entry-title">{{ edu.institution }}</p>
-          <p class="modern-resume__entry-subtitle">{{ [edu.degree, edu.field].filter(Boolean).join(', ') }}</p>
+          <p class="modern-resume__entry-subtitle">
+            {{ [edu.degree, edu.field].filter(Boolean).join(', ') }}
+          </p>
         </div>
       </article>
     </section>
@@ -134,10 +193,15 @@
             class="modern-resume__entry-title modern-resume__entry-link"
             target="_blank"
             rel="noreferrer"
-          >{{ project.title }}</a>
+            >{{ project.title }}</a
+          >
           <p v-else class="modern-resume__entry-title">{{ project.title }}</p>
-          <p v-if="project.subtitle" class="modern-resume__entry-subtitle">{{ project.subtitle }}</p>
-          <p v-if="project.description" class="modern-resume__entry-description">{{ project.description }}</p>
+          <p v-if="project.subtitle" class="modern-resume__entry-subtitle">
+            {{ project.subtitle }}
+          </p>
+          <p v-if="project.description" class="modern-resume__entry-description">
+            {{ project.description }}
+          </p>
         </div>
       </article>
     </section>
@@ -155,7 +219,9 @@
         data-page-block-kind="item"
       >
         <div class="modern-resume__entry-side">
-          <p v-if="cert.issuedAt" class="modern-resume__dates">{{ formatDateRange(cert.issuedAt, '', false) }}</p>
+          <p v-if="cert.issuedAt" class="modern-resume__dates">
+            {{ formatDateRange(cert.issuedAt, '', false) }}
+          </p>
         </div>
         <div class="modern-resume__entry-main">
           <a
@@ -164,10 +230,13 @@
             class="modern-resume__entry-title modern-resume__entry-link"
             target="_blank"
             rel="noreferrer"
-          >{{ cert.title }}</a>
+            >{{ cert.title }}</a
+          >
           <p v-else class="modern-resume__entry-title">{{ cert.title }}</p>
           <p v-if="cert.subtitle" class="modern-resume__entry-subtitle">{{ cert.subtitle }}</p>
-          <p v-if="cert.description" class="modern-resume__entry-description">{{ cert.description }}</p>
+          <p v-if="cert.description" class="modern-resume__entry-description">
+            {{ cert.description }}
+          </p>
         </div>
       </article>
     </section>
@@ -178,16 +247,8 @@
 import { computed } from 'vue'
 import { useResumePreviewModel } from '@/composables/useResumePreviewModel'
 
-const {
-  data,
-  fullName,
-  t,
-  proficiencyLabel,
-  el,
-  contactLinks,
-  formatDateRange,
-  buildLinkHref,
-} = useResumePreviewModel()
+const { data, fullName, t, proficiencyLabel, el, contactLinks, formatDateRange, buildLinkHref } =
+  useResumePreviewModel()
 
 const URL_RE = /https?:\/\/[^\s<]+/g
 
@@ -203,12 +264,20 @@ function escapeHtml(value: string): string {
 function renderTextWithLinks(value: string): string {
   const escaped = escapeHtml(value)
   return escaped
-    .replace(URL_RE, (url) => `<a href="${url}" class="modern-resume__text-link" target="_blank" rel="noreferrer">${url}</a>`)
+    .replace(
+      URL_RE,
+      (url) =>
+        `<a href="${url}" class="modern-resume__text-link" target="_blank" rel="noreferrer">${url}</a>`,
+    )
     .replace(/\n/g, '<br>')
 }
 
-const projectEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'project'))
-const certificationEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'certification'))
+const projectEntries = computed(() =>
+  data.value.projects.filter((entry) => entry.kind === 'project'),
+)
+const certificationEntries = computed(() =>
+  data.value.projects.filter((entry) => entry.kind === 'certification'),
+)
 
 defineExpose({ el })
 </script>

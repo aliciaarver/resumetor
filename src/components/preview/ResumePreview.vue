@@ -31,7 +31,9 @@
         <h2 class="resume__section-title">{{ t('preview.aboutMe') }}</h2>
         <div class="resume__divider" />
       </div>
-      <div class="resume__about" data-page-block data-page-block-kind="item">{{ data.aboutMe }}</div>
+      <div class="resume__about" data-page-block data-page-block-kind="item">
+        {{ data.aboutMe }}
+      </div>
     </section>
 
     <section v-if="data.workExperience.length" class="resume__section">
@@ -59,7 +61,8 @@
                   class="resume__exp-company-link"
                   target="_blank"
                   rel="noreferrer"
-                >{{ exp.company }}</a>
+                  >{{ exp.company }}</a
+                >
                 <span v-else>{{ exp.company }}</span>
               </span>
               <span v-if="exp.position" class="resume__exp-position">{{ exp.position }}</span>
@@ -67,7 +70,9 @@
             </div>
           </div>
           <div v-if="exp.skills.length" class="resume__exp-skills">
-            <span v-for="skill in exp.skills" :key="`${exp.id}-${skill}`" class="resume__skill">{{ skill }}</span>
+            <span v-for="skill in exp.skills" :key="`${exp.id}-${skill}`" class="resume__skill">{{
+              skill
+            }}</span>
           </div>
           <div v-if="exp.description" class="resume__exp-desc">{{ exp.description }}</div>
         </div>
@@ -79,7 +84,13 @@
         <h2 class="resume__section-title">{{ t('preview.education') }}</h2>
         <div class="resume__divider" />
       </div>
-      <div v-for="edu in data.education" :key="edu.id" class="resume__edu" data-page-block data-page-block-kind="item">
+      <div
+        v-for="edu in data.education"
+        :key="edu.id"
+        class="resume__edu"
+        data-page-block
+        data-page-block-kind="item"
+      >
         <div class="resume__edu-dates">
           {{ formatDateRange(edu.fromMonth, edu.toMonth, edu.isCurrent) }}
         </div>
@@ -87,7 +98,9 @@
           <div class="resume__edu-header">
             <div class="resume__edu-left">
               <span class="resume__edu-institution">{{ edu.institution }}</span>
-              <span class="resume__edu-degree">{{ [edu.degree, edu.field].filter(Boolean).join(', ') }}</span>
+              <span class="resume__edu-degree">{{
+                [edu.degree, edu.field].filter(Boolean).join(', ')
+              }}</span>
             </div>
           </div>
         </div>
@@ -113,7 +126,10 @@
       </div>
       <div class="resume__langs" data-page-block data-page-block-kind="item">
         <span v-for="lang in data.languages" :key="lang.id" class="resume__lang">
-          {{ lang.name }}<span v-if="lang.proficiency" class="resume__lang-level"> — {{ proficiencyLabel(lang.proficiency) }}</span>
+          {{ lang.name
+          }}<span v-if="lang.proficiency" class="resume__lang-level">
+            — {{ proficiencyLabel(lang.proficiency) }}</span
+          >
         </span>
       </div>
     </section>
@@ -138,9 +154,12 @@
               class="resume__project-title resume__project-link"
               target="_blank"
               rel="noreferrer"
-            >{{ project.title }}</a>
+              >{{ project.title }}</a
+            >
             <span v-else class="resume__project-title">{{ project.title }}</span>
-            <span v-if="project.subtitle" class="resume__project-subtitle">{{ project.subtitle }}</span>
+            <span v-if="project.subtitle" class="resume__project-subtitle">{{
+              project.subtitle
+            }}</span>
           </div>
         </div>
         <p v-if="project.description" class="resume__project-desc">{{ project.description }}</p>
@@ -167,7 +186,8 @@
               class="resume__project-title resume__project-link"
               target="_blank"
               rel="noreferrer"
-            >{{ cert.title }}</a>
+              >{{ cert.title }}</a
+            >
             <span v-else class="resume__project-title">{{ cert.title }}</span>
             <span v-if="cert.subtitle" class="resume__project-subtitle">{{ cert.subtitle }}</span>
           </div>
@@ -185,41 +205,43 @@
 import { computed } from 'vue'
 import { useResumePreviewModel } from '@/composables/useResumePreviewModel'
 
-const {
-  data,
-  fullName,
-  t,
-  proficiencyLabel,
-  el,
-  contactLinks,
-  formatDateRange,
-  buildLinkHref,
-} = useResumePreviewModel()
+const { data, fullName, t, proficiencyLabel, el, contactLinks, formatDateRange, buildLinkHref } =
+  useResumePreviewModel()
 
-const topMeta = computed(() => [
-  data.value.personal.gender,
-  data.value.personal.age,
-  data.value.personal.birthDate,
-  data.value.personal.location,
-  data.value.personal.citizenship,
-  data.value.personal.workPermit ? `${t('form.workPermit')}: ${data.value.personal.workPermit}` : '',
-].map((item) => item?.trim() ?? '').filter(Boolean))
+const topMeta = computed(() =>
+  [
+    data.value.personal.gender,
+    data.value.personal.age,
+    data.value.personal.birthDate,
+    data.value.personal.location,
+    data.value.personal.citizenship,
+    data.value.personal.workPermit
+      ? `${t('form.workPermit')}: ${data.value.personal.workPermit}`
+      : '',
+  ]
+    .map((item) => item?.trim() ?? '')
+    .filter(Boolean),
+)
 
-const projectEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'project'))
-const certificationEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'certification'))
+const projectEntries = computed(() =>
+  data.value.projects.filter((entry) => entry.kind === 'project'),
+)
+const certificationEntries = computed(() =>
+  data.value.projects.filter((entry) => entry.kind === 'certification'),
+)
 
 defineExpose({ el })
 </script>
 
 <style scoped lang="scss">
-$accent:       #4f46e5;
+$accent: #4f46e5;
 $accent-light: #ede9fe;
-$text:         #0f172a;
-$text-sub:     #475569;
-$text-muted:   #94a3b8;
-$border:       #e2e8f0;
-$font-h:       'Montserrat', sans-serif;
-$font-b:       'Inter', system-ui, sans-serif;
+$text: #0f172a;
+$text-sub: #475569;
+$text-muted: #94a3b8;
+$border: #e2e8f0;
+$font-h: 'Montserrat', sans-serif;
+$font-b: 'Inter', system-ui, sans-serif;
 
 .resume {
   width: 210mm;
@@ -292,7 +314,9 @@ $font-b:       'Inter', system-ui, sans-serif;
   &__section {
     margin-bottom: 6mm;
 
-    &:last-child { margin-bottom: 0; }
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 
   &__section-header {
@@ -335,7 +359,9 @@ $font-b:       'Inter', system-ui, sans-serif;
     gap: 4mm;
     margin-bottom: 4.5mm;
 
-    &:last-child { margin-bottom: 0; }
+    &:last-child {
+      margin-bottom: 0;
+    }
 
     // Даты слева
     &-dates {
@@ -378,7 +404,9 @@ $font-b:       'Inter', system-ui, sans-serif;
       color: $accent;
       text-decoration: none;
 
-      &:hover { text-decoration: underline; }
+      &:hover {
+        text-decoration: underline;
+      }
     }
 
     &-position {
@@ -414,7 +442,9 @@ $font-b:       'Inter', system-ui, sans-serif;
     gap: 4mm;
     margin-bottom: 3mm;
 
-    &:last-child { margin-bottom: 0; }
+    &:last-child {
+      margin-bottom: 0;
+    }
 
     &-dates {
       font-size: 8pt;
@@ -495,7 +525,9 @@ $font-b:       'Inter', system-ui, sans-serif;
   &__project {
     margin-bottom: 4mm;
 
-    &:last-child { margin-bottom: 0; }
+    &:last-child {
+      margin-bottom: 0;
+    }
 
     &-header {
       display: flex;
@@ -521,7 +553,9 @@ $font-b:       'Inter', system-ui, sans-serif;
       color: $accent;
       text-decoration: none;
 
-      &:hover { text-decoration: underline; }
+      &:hover {
+        text-decoration: underline;
+      }
     }
 
     &-subtitle {

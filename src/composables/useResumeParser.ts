@@ -63,7 +63,11 @@ export function useResumeParser() {
         throw new Error(t('parser.unsupportedFileType'))
       }
 
-      const { text, personal, pdfMeta: extractedPdfMeta } = await extractPdfData(file, t, featureFlags)
+      const {
+        text,
+        personal,
+        pdfMeta: extractedPdfMeta,
+      } = await extractPdfData(file, t, featureFlags)
       const parsed = parseTextToResumeDetailed(text, {
         genericLinkLabel: t('common.link'),
         featureFlags,
@@ -126,7 +130,9 @@ function mergePersonalInfo(
     location: parsed.location || extractedPersonal.location || '',
     citizenship: parsed.citizenship || extractedPersonal.citizenship || '',
     workPermit: parsed.workPermit || extractedPersonal.workPermit || '',
-    workFormats: parsed.workFormats?.length ? parsed.workFormats : (extractedPersonal.workFormats ?? []),
+    workFormats: parsed.workFormats?.length
+      ? parsed.workFormats
+      : (extractedPersonal.workFormats ?? []),
     birthDate: parsed.birthDate || extractedPersonal.birthDate || '',
     gender: parsed.gender || extractedPersonal.gender || '',
     age: parsed.age || extractedPersonal.age || '',
@@ -163,7 +169,7 @@ async function extractPdfData(
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
+    import.meta.url,
   ).href
 
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -200,12 +206,7 @@ async function extractHeaderPersonalInfo(pdf: any): Promise<Partial<ResumeData['
     const url = annotation.url || annotation.unsafeUrl
     const rect = annotation.rect
 
-    return Boolean(
-      url &&
-      Array.isArray(rect) &&
-      pageHeight &&
-      rect[1] >= pageHeight * 0.75,
-    )
+    return Boolean(url && Array.isArray(rect) && pageHeight && rect[1] >= pageHeight * 0.75)
   })
 
   const links = headerLinks
@@ -272,11 +273,16 @@ function buildParsedPdfMeta(
   resume: Partial<ResumeData>,
   defaultTitleSuffix: string,
 ): Partial<PdfMetadata> {
-  const fullName = [
-    resume.personal?.lastName ?? '',
-    resume.personal?.firstName ?? '',
-    resume.personal?.middleName ?? '',
-  ].map((part) => part.trim()).filter(Boolean).join(' ') || (resume.personal?.fullName?.trim() ?? '')
+  const fullName =
+    [
+      resume.personal?.lastName ?? '',
+      resume.personal?.firstName ?? '',
+      resume.personal?.middleName ?? '',
+    ]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(' ') ||
+    (resume.personal?.fullName?.trim() ?? '')
   const aboutMe = resume.aboutMe?.trim() ?? ''
 
   return {
@@ -337,11 +343,7 @@ function applyConfidenceFallback(
   resume: Partial<ResumeData>,
   blocks: ParseBlockReview[],
 ): Partial<ResumeData> {
-  const keep = new Set(
-    blocks
-      .filter((block) => block.imported)
-      .map((block) => block.key)
-  )
+  const keep = new Set(blocks.filter((block) => block.imported).map((block) => block.key))
 
   const safeResume: Partial<ResumeData> = {}
 

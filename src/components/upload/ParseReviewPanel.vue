@@ -14,12 +14,17 @@
         <div class="review__row">
           <div class="review__meta">
             <strong class="review__label">{{ block.label }}</strong>
-            <span class="review__status" :class="block.imported ? 'review__status--ok' : 'review__status--hold'">
+            <span
+              class="review__status"
+              :class="block.imported ? 'review__status--ok' : 'review__status--hold'"
+            >
               {{ block.imported ? t('review.imported') : t('review.heldBack') }}
             </span>
           </div>
           <div class="review__badges">
-            <span class="review__badge">{{ t('review.confidence') }}: {{ confidenceLabel(block.confidence) }}</span>
+            <span class="review__badge"
+              >{{ t('review.confidence') }}: {{ confidenceLabel(block.confidence) }}</span
+            >
             <span class="review__badge">{{ Math.round(block.score * 100) }}%</span>
           </div>
         </div>
@@ -36,7 +41,9 @@
     <section v-if="review.diff && review.diff.totalChanges > 0" class="review__diff">
       <div class="review__header">
         <h4 class="review__subtitle">{{ t('review.diffTitle') }}</h4>
-        <span class="review__badge">{{ t('review.diffChanged', { count: review.diff.totalChanges }) }}</span>
+        <span class="review__badge">{{
+          t('review.diffChanged', { count: review.diff.totalChanges })
+        }}</span>
       </div>
 
       <div class="review__list">
@@ -50,16 +57,25 @@
               <strong class="review__label">{{ t(`review.${block.key}`) }}</strong>
             </div>
             <div class="review__badges">
-              <span v-if="block.addedCount" class="review__badge">{{ t('review.diffAdded', { count: block.addedCount }) }}</span>
-              <span v-if="block.removedCount" class="review__badge">{{ t('review.diffRemoved', { count: block.removedCount }) }}</span>
-              <span class="review__badge">{{ t('review.diffChanged', { count: block.changeCount }) }}</span>
+              <span v-if="block.addedCount" class="review__badge">{{
+                t('review.diffAdded', { count: block.addedCount })
+              }}</span>
+              <span v-if="block.removedCount" class="review__badge">{{
+                t('review.diffRemoved', { count: block.removedCount })
+              }}</span>
+              <span class="review__badge">{{
+                t('review.diffChanged', { count: block.changeCount })
+              }}</span>
             </div>
           </div>
         </article>
       </div>
     </section>
 
-    <details v-if="review.hasWarnings && review.rawText.trim()" class="review__details review__details--full">
+    <details
+      v-if="review.hasWarnings && review.rawText.trim()"
+      class="review__details review__details--full"
+    >
       <summary>{{ t('review.fullRawText') }}</summary>
       <pre class="review__raw review__raw--full">{{ review.rawText }}</pre>
     </details>
@@ -78,7 +94,9 @@ const props = defineProps<{
 const localeStore = useLocaleStore()
 const { t } = localeStore
 
-const changedDiffBlocks = computed(() => props.review?.diff?.blocks.filter((block) => block.changed) ?? [])
+const changedDiffBlocks = computed(
+  () => props.review?.diff?.blocks.filter((block) => block.changed) ?? [],
+)
 
 function confidenceLabel(value: ParseConfidenceLevel) {
   return t(`review.confidence${value.charAt(0).toUpperCase()}${value.slice(1)}`)

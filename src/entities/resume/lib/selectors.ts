@@ -6,7 +6,10 @@ export function detectDemoResumeLocale(resume: ResumeData): Locale | null {
   const comparableResume = toComparableResume(resume)
 
   for (const locale of ['ru', 'en'] as const) {
-    if (JSON.stringify(comparableResume) === JSON.stringify(toComparableResume(createDemoResume(locale)))) {
+    if (
+      JSON.stringify(comparableResume) ===
+      JSON.stringify(toComparableResume(createDemoResume(locale)))
+    ) {
       return locale
     }
   }
@@ -34,39 +37,42 @@ export function isResumeEffectivelyEmpty(resume: ResumeData): boolean {
   ].some((value) => value.trim())
 
   const hasLinks = resume.personal.links.some((link) => link.label.trim() || link.url.trim())
-  const hasExperience = resume.workExperience.some((entry) =>
-    [
-      entry.company,
-      entry.companyUrl,
-      entry.position,
-      entry.location,
-      entry.fromMonth,
-      entry.toMonth,
-      entry.description,
-      ...entry.skills,
-    ].some((value) => value.trim()) || entry.isCurrent
+  const hasExperience = resume.workExperience.some(
+    (entry) =>
+      [
+        entry.company,
+        entry.companyUrl,
+        entry.position,
+        entry.location,
+        entry.fromMonth,
+        entry.toMonth,
+        entry.description,
+        ...entry.skills,
+      ].some((value) => value.trim()) || entry.isCurrent,
   )
-  const hasEducation = resume.education.some((entry) =>
-    [
-      entry.institution,
-      entry.degree,
-      entry.field,
-      entry.fromMonth,
-      entry.toMonth,
-    ].some((value) => value.trim()) || entry.isCurrent
+  const hasEducation = resume.education.some(
+    (entry) =>
+      [entry.institution, entry.degree, entry.field, entry.fromMonth, entry.toMonth].some((value) =>
+        value.trim(),
+      ) || entry.isCurrent,
   )
   const hasSkills = resume.skills.some((entry) => entry.name.trim())
-  const hasLanguages = resume.languages.some((entry) => entry.name.trim() || entry.proficiency.trim())
+  const hasLanguages = resume.languages.some(
+    (entry) => entry.name.trim() || entry.proficiency.trim(),
+  )
   const hasProjects = resume.projects.some((entry) =>
-    [
-      entry.title,
-      entry.subtitle,
-      entry.link,
-      entry.description,
-    ].some((value) => value.trim())
+    [entry.title, entry.subtitle, entry.link, entry.description].some((value) => value.trim()),
   )
 
-  return !(hasPersonalText || hasLinks || hasExperience || hasEducation || hasSkills || hasLanguages || hasProjects)
+  return !(
+    hasPersonalText ||
+    hasLinks ||
+    hasExperience ||
+    hasEducation ||
+    hasSkills ||
+    hasLanguages ||
+    hasProjects
+  )
 }
 
 function toComparableResume(resume: ResumeData) {
@@ -89,25 +95,39 @@ function toComparableResume(resume: ResumeData) {
       links: resume.personal.links.map(({ label, url }) => ({ label, url })),
     },
     aboutMe: resume.aboutMe,
-    workExperience: resume.workExperience.map(({ company, companyUrl, position, location, fromMonth, toMonth, isCurrent, description, skills }) => ({
-      company,
-      companyUrl,
-      position,
-      location,
-      fromMonth,
-      toMonth,
-      isCurrent,
-      description,
-      skills,
-    })),
-    education: resume.education.map(({ institution, degree, field, fromMonth, toMonth, isCurrent }) => ({
-      institution,
-      degree,
-      field,
-      fromMonth,
-      toMonth,
-      isCurrent,
-    })),
+    workExperience: resume.workExperience.map(
+      ({
+        company,
+        companyUrl,
+        position,
+        location,
+        fromMonth,
+        toMonth,
+        isCurrent,
+        description,
+        skills,
+      }) => ({
+        company,
+        companyUrl,
+        position,
+        location,
+        fromMonth,
+        toMonth,
+        isCurrent,
+        description,
+        skills,
+      }),
+    ),
+    education: resume.education.map(
+      ({ institution, degree, field, fromMonth, toMonth, isCurrent }) => ({
+        institution,
+        degree,
+        field,
+        fromMonth,
+        toMonth,
+        isCurrent,
+      }),
+    ),
     skills: resume.skills.map(({ name }) => ({ name })),
     languages: resume.languages.map(({ name, proficiency }) => ({ name, proficiency })),
     projects: resume.projects.map(({ kind, title, subtitle, issuedAt, link, description }) => ({

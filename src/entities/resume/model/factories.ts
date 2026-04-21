@@ -1,14 +1,22 @@
 import type { Locale } from '@/types/i18n'
 import type { ResumeData } from '@/entities/resume/model/types'
 
-const DEMO_RESUMES: Record<Locale, Omit<ResumeData, 'personal' | 'workExperience' | 'education' | 'skills' | 'languages' | 'projects'> & {
-  personal: Omit<ResumeData['personal'], 'links'> & { links: Array<Omit<ResumeData['personal']['links'][number], 'id'>> }
-  workExperience: Array<Omit<ResumeData['workExperience'][number], 'id'>>
-  education: Array<Omit<ResumeData['education'][number], 'id'>>
-  skills: Array<Omit<ResumeData['skills'][number], 'id'>>
-  languages: Array<Omit<ResumeData['languages'][number], 'id'>>
-  projects: Array<Omit<ResumeData['projects'][number], 'id'>>
-}> = {
+const DEMO_RESUMES: Record<
+  Locale,
+  Omit<
+    ResumeData,
+    'personal' | 'workExperience' | 'education' | 'skills' | 'languages' | 'projects'
+  > & {
+    personal: Omit<ResumeData['personal'], 'links'> & {
+      links: Array<Omit<ResumeData['personal']['links'][number], 'id'>>
+    }
+    workExperience: Array<Omit<ResumeData['workExperience'][number], 'id'>>
+    education: Array<Omit<ResumeData['education'][number], 'id'>>
+    skills: Array<Omit<ResumeData['skills'][number], 'id'>>
+    languages: Array<Omit<ResumeData['languages'][number], 'id'>>
+    projects: Array<Omit<ResumeData['projects'][number], 'id'>>
+  }
+> = {
   ru: {
     personal: {
       fullName: 'Стелла, принцесса Солярии',
@@ -103,7 +111,8 @@ const DEMO_RESUMES: Record<Locale, Omit<ResumeData, 'personal' | 'workExperience
         subtitle: 'Креативный лидер и официальный спикер',
         issuedAt: '',
         link: 'https://stella-solaria.example/gala',
-        description: 'Курировала визуальную концепцию, публичную программу и межкоролевскую координацию ежегодного культурного бала Солярии.',
+        description:
+          'Курировала визуальную концепцию, публичную программу и межкоролевскую координацию ежегодного культурного бала Солярии.',
       },
       {
         kind: 'certification',
@@ -111,7 +120,8 @@ const DEMO_RESUMES: Record<Locale, Omit<ResumeData, 'personal' | 'workExperience
         subtitle: 'Программа развития магических артефактов',
         issuedAt: '2024-01',
         link: '',
-        description: 'Разработала и провела серию тренировок по безопасному использованию и демонстрации артефактов света для союзных команд.',
+        description:
+          'Разработала и провела серию тренировок по безопасному использованию и демонстрации артефактов света для союзных команд.',
       },
     ],
   },
@@ -209,7 +219,8 @@ const DEMO_RESUMES: Record<Locale, Omit<ResumeData, 'personal' | 'workExperience
         subtitle: 'Creative Lead and Official Spokesperson',
         issuedAt: '',
         link: 'https://stella-solaria.example/gala',
-        description: 'Led the visual identity, public program, and cross-kingdom coordination for Solaria’s flagship cultural event.',
+        description:
+          'Led the visual identity, public program, and cross-kingdom coordination for Solaria’s flagship cultural event.',
       },
       {
         kind: 'certification',
@@ -217,7 +228,8 @@ const DEMO_RESUMES: Record<Locale, Omit<ResumeData, 'personal' | 'workExperience
         subtitle: 'Artifact Readiness Program',
         issuedAt: '2024-01',
         link: '',
-        description: 'Designed and delivered a training program focused on safe use and presentation of light-based artifacts for allied teams.',
+        description:
+          'Designed and delivered a training program focused on safe use and presentation of light-based artifacts for allied teams.',
       },
     ],
   },

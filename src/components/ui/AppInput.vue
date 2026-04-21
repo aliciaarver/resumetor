@@ -21,13 +21,16 @@ import { useId } from 'vue'
 defineOptions({ inheritAttrs: false })
 const inputId = useId()
 
-withDefaults(defineProps<{
-  modelValue: string
-  label?: string
-  placeholder?: string
-  type?: string
-  error?: string
-}>(), { type: 'text' })
+withDefaults(
+  defineProps<{
+    modelValue: string
+    label?: string
+    placeholder?: string
+    type?: string
+    error?: string
+  }>(),
+  { type: 'text' },
+)
 defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>
 

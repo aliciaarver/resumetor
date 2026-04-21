@@ -10,7 +10,9 @@
         :disabled="disabled"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
-      <span v-if="!modelValue && !disabled" class="month-field__placeholder">{{ placeholder }}</span>
+      <span v-if="!modelValue && !disabled" class="month-field__placeholder">{{
+        placeholder
+      }}</span>
     </div>
   </div>
 </template>
@@ -20,15 +22,18 @@ import { useId } from 'vue'
 
 const inputId = useId()
 
-withDefaults(defineProps<{
-  modelValue: string
-  label?: string
-  placeholder: string
-  disabled?: boolean
-}>(), {
-  label: '',
-  disabled: false,
-})
+withDefaults(
+  defineProps<{
+    modelValue: string
+    label?: string
+    placeholder: string
+    disabled?: boolean
+  }>(),
+  {
+    label: '',
+    disabled: false,
+  },
+)
 
 defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>

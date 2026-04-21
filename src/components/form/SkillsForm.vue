@@ -9,9 +9,18 @@
       <TransitionGroup name="list" tag="div" class="skills__list">
         <div v-for="skill in data.skills" :key="skill.id" class="skill-row">
           <AppInput v-model="skill.name" :placeholder="t('form.skillPlaceholder')" />
-          <button class="skill-row__remove" @click="removeSkill(skill.id)" :title="t('common.remove')">
+          <button
+            class="skill-row__remove"
+            @click="removeSkill(skill.id)"
+            :title="t('common.remove')"
+          >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path
+                d="M1 1l12 12M13 1L1 13"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -72,7 +81,9 @@ const { addSkill, removeSkill } = store
     height: 28px;
     border-radius: $radius-sm;
     color: $color-text-muted;
-    transition: color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s;
 
     &:hover {
       color: $color-danger;
@@ -90,6 +101,13 @@ const { addSkill, removeSkill } = store
   border-radius: $radius-md;
 }
 
-.list-enter-active, .list-leave-active { transition: all 0.2s ease; }
-.list-enter-from, .list-leave-to { opacity: 0; transform: translateY(-6px); }
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.2s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 </style>

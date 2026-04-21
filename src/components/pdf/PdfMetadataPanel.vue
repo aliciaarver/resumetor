@@ -1,13 +1,23 @@
 <template>
   <div v-if="open" class="panel-layer">
-    <button type="button" class="panel-layer__backdrop" aria-label="Close PDF settings" @click="$emit('close')" />
+    <button
+      type="button"
+      class="panel-layer__backdrop"
+      aria-label="Close PDF settings"
+      @click="$emit('close')"
+    />
 
     <div class="panel" role="dialog" aria-modal="true" :aria-labelledby="titleId">
       <div class="panel__header">
         <span :id="titleId" class="panel__title">{{ t('pdf.settings') }}</span>
         <button type="button" class="panel__close" @click="$emit('close')">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path
+              d="M2 2l12 12M14 2L2 14"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </div>
@@ -17,8 +27,16 @@
       </p>
 
       <div class="panel__fields">
-        <AppInput v-model="meta.title" :label="t('pdf.title')" :placeholder="t('pdf.titlePlaceholder')" />
-        <AppInput v-model="meta.author" :label="t('pdf.author')" :placeholder="t('pdf.authorPlaceholder')" />
+        <AppInput
+          v-model="meta.title"
+          :label="t('pdf.title')"
+          :placeholder="t('pdf.titlePlaceholder')"
+        />
+        <AppInput
+          v-model="meta.author"
+          :label="t('pdf.author')"
+          :placeholder="t('pdf.authorPlaceholder')"
+        />
         <AppTextarea
           v-model="meta.subject"
           :label="t('pdf.subject')"

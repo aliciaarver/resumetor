@@ -74,7 +74,11 @@ function diffPersonal(before: ResumeData, after: ResumeData): ParseDiffBlock {
     }
   }
 
-  const formatsDiff = diffArrayBlock('personal', before.personal.workFormats, after.personal.workFormats)
+  const formatsDiff = diffArrayBlock(
+    'personal',
+    before.personal.workFormats,
+    after.personal.workFormats,
+  )
   changeCount += formatsDiff.changeCount
   addedCount += formatsDiff.addedCount
   removedCount += formatsDiff.removedCount
@@ -108,8 +112,12 @@ function diffTextBlock(key: ResumeBlockKey, before: string, after: string): Pars
 function diffArrayBlock(key: ResumeBlockKey, before: unknown[], after: unknown[]): ParseDiffBlock {
   const beforeComparable = before.map(toComparableValue)
   const afterComparable = after.map(toComparableValue)
-  const beforeMap = new Map(beforeComparable.map((value) => [value, (beforeMapCount(beforeComparable, value))]))
-  const afterMap = new Map(afterComparable.map((value) => [value, (beforeMapCount(afterComparable, value))]))
+  const beforeMap = new Map(
+    beforeComparable.map((value) => [value, beforeMapCount(beforeComparable, value)]),
+  )
+  const afterMap = new Map(
+    afterComparable.map((value) => [value, beforeMapCount(afterComparable, value)]),
+  )
 
   const keys = new Set([...beforeMap.keys(), ...afterMap.keys()])
   let addedCount = 0
@@ -144,7 +152,10 @@ function toComparableValue(value: unknown): string {
 
   const entries = Object.entries(value as Record<string, unknown>)
     .filter(([key]) => key !== 'id')
-    .map(([key, entryValue]) => [key, typeof entryValue === 'string' ? entryValue.trim() : entryValue])
+    .map(([key, entryValue]) => [
+      key,
+      typeof entryValue === 'string' ? entryValue.trim() : entryValue,
+    ])
     .sort((left, right) => String(left[0]).localeCompare(String(right[0])))
 
   return JSON.stringify(entries)

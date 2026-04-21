@@ -22,8 +22,20 @@
       />
 
       <template v-if="!parsing">
-        <svg class="uploader__icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4M8 8l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg
+          class="uploader__icon"
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4M8 8l4-4 4 4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
         <p class="uploader__text">
           {{ t('upload.dropPrefix') }}<span class="uploader__link">{{ t('upload.browse') }}</span>
@@ -36,7 +48,9 @@
         <p class="uploader__text">{{ t('upload.parsing') }}</p>
       </template>
 
-      <p v-if="uploadError || parseError" class="uploader__error" @click.stop>{{ uploadError || parseError }}</p>
+      <p v-if="uploadError || parseError" class="uploader__error" @click.stop>
+        {{ uploadError || parseError }}
+      </p>
       <p v-if="success" class="uploader__success" @click.stop>
         {{ t('upload.success') }}
       </p>
@@ -114,13 +128,16 @@ function onFileChange(e: Event) {
   padding: $sp-5;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: $sp-2;
 
-  &:hover, &--over {
+  &:hover,
+  &--over {
     border-color: $color-primary;
     background: rgba($color-primary, 0.03);
   }
@@ -178,6 +195,8 @@ function onFileChange(e: Event) {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

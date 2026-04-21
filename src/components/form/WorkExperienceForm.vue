@@ -2,7 +2,9 @@
   <section class="section">
     <div class="section__header">
       <h2 class="section__title">{{ t('form.workExperience') }}</h2>
-      <AppButton variant="ghost" size="sm" @click="addWorkExperience">{{ t('common.add') }}</AppButton>
+      <AppButton variant="ghost" size="sm" @click="addWorkExperience">{{
+        t('common.add')
+      }}</AppButton>
     </div>
 
     <TransitionGroup v-if="data.workExperience.length" name="list" tag="div" class="list">

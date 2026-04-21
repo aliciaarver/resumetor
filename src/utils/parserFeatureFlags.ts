@@ -44,7 +44,9 @@ function readStoredParserFeatureFlags(): Partial<ParserFeatureFlags> {
     const parsed = JSON.parse(raw) as Record<string, unknown>
     const result: Partial<ParserFeatureFlags> = {}
 
-    for (const key of Object.keys(DEFAULT_PARSER_FEATURE_FLAGS) as Array<keyof ParserFeatureFlags>) {
+    for (const key of Object.keys(DEFAULT_PARSER_FEATURE_FLAGS) as Array<
+      keyof ParserFeatureFlags
+    >) {
       if (typeof parsed[key] === 'boolean') {
         result[key] = parsed[key]
       }

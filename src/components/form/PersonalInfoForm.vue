@@ -3,13 +3,30 @@
     <h2 class="section__title">{{ t('form.personalInfo') }}</h2>
 
     <div class="grid-3">
-      <AppInput v-model="data.personal.lastName" :label="t('form.lastName')" :placeholder="t('form.lastNamePlaceholder')" />
-      <AppInput v-model="data.personal.firstName" :label="t('form.firstName')" :placeholder="t('form.firstNamePlaceholder')" />
-      <AppInput v-model="data.personal.middleName" :label="t('form.middleName')" :placeholder="t('form.middleNamePlaceholder')" />
+      <AppInput
+        v-model="data.personal.lastName"
+        :label="t('form.lastName')"
+        :placeholder="t('form.lastNamePlaceholder')"
+      />
+      <AppInput
+        v-model="data.personal.firstName"
+        :label="t('form.firstName')"
+        :placeholder="t('form.firstNamePlaceholder')"
+      />
+      <AppInput
+        v-model="data.personal.middleName"
+        :label="t('form.middleName')"
+        :placeholder="t('form.middleNamePlaceholder')"
+      />
     </div>
 
     <div class="grid-2">
-      <AppInput v-model="data.personal.phone" :label="t('form.phone')" placeholder="+7 999 123-45-67" type="tel" />
+      <AppInput
+        v-model="data.personal.phone"
+        :label="t('form.phone')"
+        placeholder="+7 999 123-45-67"
+        type="tel"
+      />
       <AppInput
         v-model="data.personal.position"
         :label="t('form.desiredPosition')"
@@ -18,14 +35,34 @@
     </div>
 
     <div class="grid-2">
-      <AppInput v-model="data.personal.location" :label="t('form.location')" :placeholder="t('form.locationPlaceholder')" />
-      <AppInput v-model="data.personal.citizenship" :label="t('form.citizenship')" :placeholder="t('form.citizenshipPlaceholder')" />
+      <AppInput
+        v-model="data.personal.location"
+        :label="t('form.location')"
+        :placeholder="t('form.locationPlaceholder')"
+      />
+      <AppInput
+        v-model="data.personal.citizenship"
+        :label="t('form.citizenship')"
+        :placeholder="t('form.citizenshipPlaceholder')"
+      />
     </div>
 
     <div class="grid-3">
-      <AppInput v-model="data.personal.workPermit" :label="t('form.workPermit')" :placeholder="t('form.workPermitPlaceholder')" />
-      <AppInput v-model="data.personal.gender" :label="t('form.gender')" :placeholder="t('form.genderPlaceholder')" />
-      <AppInput v-model="data.personal.age" :label="t('form.age')" :placeholder="t('form.agePlaceholder')" />
+      <AppInput
+        v-model="data.personal.workPermit"
+        :label="t('form.workPermit')"
+        :placeholder="t('form.workPermitPlaceholder')"
+      />
+      <AppInput
+        v-model="data.personal.gender"
+        :label="t('form.gender')"
+        :placeholder="t('form.genderPlaceholder')"
+      />
+      <AppInput
+        v-model="data.personal.age"
+        :label="t('form.age')"
+        :placeholder="t('form.agePlaceholder')"
+      />
     </div>
 
     <div class="grid-2">
@@ -37,11 +74,26 @@
       <div class="photo-field">
         <label class="field__label">{{ t('form.photo') }}</label>
         <div class="photo-field__controls">
-          <input ref="photoInputEl" class="photo-field__input" type="file" accept="image/*" @change="onPhotoChange" />
-          <AppButton variant="secondary" size="sm" @click="openPhotoPicker">{{ t('form.photoUpload') }}</AppButton>
-          <AppButton v-if="data.personal.photo" variant="ghost" size="sm" @click="removePhoto">{{ t('form.photoRemove') }}</AppButton>
+          <input
+            ref="photoInputEl"
+            class="photo-field__input"
+            type="file"
+            accept="image/*"
+            @change="onPhotoChange"
+          />
+          <AppButton variant="secondary" size="sm" @click="openPhotoPicker">{{
+            t('form.photoUpload')
+          }}</AppButton>
+          <AppButton v-if="data.personal.photo" variant="ghost" size="sm" @click="removePhoto">{{
+            t('form.photoRemove')
+          }}</AppButton>
         </div>
-        <img v-if="data.personal.photo" :src="data.personal.photo" alt="" class="photo-field__preview" />
+        <img
+          v-if="data.personal.photo"
+          :src="data.personal.photo"
+          alt=""
+          class="photo-field__preview"
+        />
       </div>
     </div>
 
@@ -50,7 +102,9 @@
       <div class="format-picker">
         <select v-model="selectedWorkFormat" class="format-picker__select" @change="addWorkFormat">
           <option value="">{{ t('form.workFormatPlaceholder') }}</option>
-          <option v-for="option in workFormatOptions" :key="option" :value="option">{{ option }}</option>
+          <option v-for="option in workFormatOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
         </select>
         <div v-if="data.personal.workFormats.length" class="tags">
           <button
@@ -69,7 +123,9 @@
 
     <div class="links">
       <div class="links__header">
-        <AppButton variant="ghost" size="sm" @click="addSocialLink">{{ t('form.addLink') }}</AppButton>
+        <AppButton variant="ghost" size="sm" @click="addSocialLink">{{
+          t('form.addLink')
+        }}</AppButton>
       </div>
 
       <TransitionGroup name="list" tag="div" class="links__list">
@@ -88,9 +144,18 @@
             :placeholder="linkUrlPlaceholder(link.label)"
             :type="normalizeSocialLinkLabel(link.label) === 'Email' ? 'email' : 'url'"
           />
-          <button class="link-row__remove" @click="removeSocialLink(link.id)" :title="t('common.remove')">
+          <button
+            class="link-row__remove"
+            @click="removeSocialLink(link.id)"
+            :title="t('common.remove')"
+          >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path
+                d="M1 1l12 12M13 1L1 13"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -118,7 +183,14 @@ const { addSocialLink, removeSocialLink } = store
 const photoInputEl = ref<HTMLInputElement | null>(null)
 const selectedWorkFormat = ref('')
 
-const RU_WORK_FORMATS = ['Удалённо', 'Гибрид', 'Офис', 'Проектная работа', 'Частичная занятость', 'Полная занятость']
+const RU_WORK_FORMATS = [
+  'Удалённо',
+  'Гибрид',
+  'Офис',
+  'Проектная работа',
+  'Частичная занятость',
+  'Полная занятость',
+]
 const EN_WORK_FORMATS = ['Remote', 'Hybrid', 'On-site', 'Contract', 'Part-time', 'Full-time']
 
 const workFormatOptions = ref<string[]>([])
@@ -132,13 +204,20 @@ watch(
 )
 
 watch(
-  () => [data.value.personal.lastName, data.value.personal.firstName, data.value.personal.middleName],
+  () => [
+    data.value.personal.lastName,
+    data.value.personal.firstName,
+    data.value.personal.middleName,
+  ],
   () => {
     data.value.personal.fullName = [
       data.value.personal.lastName,
       data.value.personal.firstName,
       data.value.personal.middleName,
-    ].map((value) => value.trim()).filter(Boolean).join(' ')
+    ]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(' ')
   },
   { immediate: true },
 )

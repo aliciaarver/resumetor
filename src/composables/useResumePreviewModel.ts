@@ -18,7 +18,9 @@ export function useResumePreviewModel() {
       data.value.personal.lastName,
       data.value.personal.firstName,
       data.value.personal.middleName,
-    ].map((part) => part.trim()).filter(Boolean)
+    ]
+      .map((part) => part.trim())
+      .filter(Boolean)
 
     return parts.join(' ') || data.value.personal.fullName.trim()
   })
@@ -54,7 +56,7 @@ export function useResumePreviewModel() {
           href,
         }
       })
-      .filter((link) => link.text)
+      .filter((link) => link.text),
   )
 
   return {

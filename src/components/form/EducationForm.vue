@@ -8,14 +8,28 @@
     <TransitionGroup v-if="data.education.length" name="list" tag="div" class="list">
       <div v-for="edu in data.education" :key="edu.id" class="block">
         <div class="block__header">
-          <AppButton variant="danger" size="sm" @click="removeEducation(edu.id)">{{ t('common.remove') }}</AppButton>
+          <AppButton variant="danger" size="sm" @click="removeEducation(edu.id)">{{
+            t('common.remove')
+          }}</AppButton>
         </div>
 
-        <AppInput v-model="edu.institution" :label="t('form.institution')" :placeholder="t('form.institutionPlaceholder')" />
+        <AppInput
+          v-model="edu.institution"
+          :label="t('form.institution')"
+          :placeholder="t('form.institutionPlaceholder')"
+        />
 
         <div class="grid-2">
-          <AppInput v-model="edu.degree" :label="t('form.degree')" :placeholder="t('form.degreePlaceholder')" />
-          <AppInput v-model="edu.field" :label="t('form.fieldOfStudy')" :placeholder="t('form.fieldOfStudyPlaceholder')" />
+          <AppInput
+            v-model="edu.degree"
+            :label="t('form.degree')"
+            :placeholder="t('form.degreePlaceholder')"
+          />
+          <AppInput
+            v-model="edu.field"
+            :label="t('form.fieldOfStudy')"
+            :placeholder="t('form.fieldOfStudyPlaceholder')"
+          />
         </div>
 
         <div class="dates">
@@ -33,13 +47,16 @@
             :disabled="edu.isCurrent"
           />
           <label class="current-check">
-            <input type="checkbox" v-model="edu.isCurrent" @change="edu.isCurrent && (edu.toMonth = '')" />
+            <input
+              type="checkbox"
+              v-model="edu.isCurrent"
+              @change="edu.isCurrent && (edu.toMonth = '')"
+            />
             <span>{{ t('common.present') }}</span>
           </label>
         </div>
       </div>
     </TransitionGroup>
-
   </section>
 </template>
 
@@ -128,8 +145,15 @@ const { addEducation, removeEducation } = store
   }
 }
 
-.list-enter-active, .list-leave-active { transition: all 0.25s ease; }
-.list-enter-from, .list-leave-to { opacity: 0; transform: translateY(-8px); }
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.25s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
 
 @media (max-width: 720px) {
   .grid-2,

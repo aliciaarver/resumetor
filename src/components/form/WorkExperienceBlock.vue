@@ -1,16 +1,26 @@
 <template>
   <div class="block">
     <div class="block__header">
-      <AppButton variant="danger" size="sm" @click="$emit('remove')">{{ t('common.remove') }}</AppButton>
+      <AppButton variant="danger" size="sm" @click="$emit('remove')">{{
+        t('common.remove')
+      }}</AppButton>
     </div>
 
     <div class="grid-2">
-      <AppInput v-model="exp.company" :label="t('form.company')" :placeholder="t('form.companyPlaceholder')" />
+      <AppInput
+        v-model="exp.company"
+        :label="t('form.company')"
+        :placeholder="t('form.companyPlaceholder')"
+      />
       <AppInput v-model="exp.companyUrl" :label="t('form.companyUrl')" placeholder="https://..." />
     </div>
 
     <div class="grid-2">
-      <AppInput v-model="exp.position" :label="t('form.position')" :placeholder="t('form.positionPlaceholder')" />
+      <AppInput
+        v-model="exp.position"
+        :label="t('form.position')"
+        :placeholder="t('form.positionPlaceholder')"
+      />
       <AppInput
         v-model="exp.location"
         :label="t('form.experienceLocation')"

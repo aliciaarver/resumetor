@@ -28,10 +28,7 @@ interface PdfLine {
   isHeading: boolean
 }
 
-export function normalizePdfPageText(
-  items: unknown[],
-  pageWidth: number,
-): string {
+export function normalizePdfPageText(items: unknown[], pageWidth: number): string {
   const tokens = items
     .filter(isPdfTextItem)
     .map(toPdfToken)
@@ -115,7 +112,8 @@ function buildLines(tokens: PdfToken[]): PdfLine[] {
 
     if (targetLine) {
       targetLine.tokens.push(token)
-      targetLine.y = (targetLine.y * (targetLine.tokens.length - 1) + token.y) / targetLine.tokens.length
+      targetLine.y =
+        (targetLine.y * (targetLine.tokens.length - 1) + token.y) / targetLine.tokens.length
       return
     }
 
@@ -218,7 +216,10 @@ function orderLines(lines: PdfLine[], pageWidth: number): PdfLine[] {
       return a.xStart - b.xStart
     })
 
-  if (isAuxiliaryMetaColumn(leftLines, rightLines, pageWidth) || isAuxiliaryMetaColumn(rightLines, leftLines, pageWidth)) {
+  if (
+    isAuxiliaryMetaColumn(leftLines, rightLines, pageWidth) ||
+    isAuxiliaryMetaColumn(rightLines, leftLines, pageWidth)
+  ) {
     return [...lines].sort((a, b) => {
       if (Math.abs(a.y - b.y) > 0.1) return b.y - a.y
       return a.xStart - b.xStart
@@ -245,7 +246,11 @@ function orderLines(lines: PdfLine[], pageWidth: number): PdfLine[] {
   return [...preamble, ...leftLines, ...rightLines, ...tailWideLines]
 }
 
-function isAuxiliaryMetaColumn(candidate: PdfLine[], counterpart: PdfLine[], pageWidth: number): boolean {
+function isAuxiliaryMetaColumn(
+  candidate: PdfLine[],
+  counterpart: PdfLine[],
+  pageWidth: number,
+): boolean {
   if (candidate.length < 2 || counterpart.length < 4) return false
 
   const medianWidth = median(candidate.map((line) => line.width))
@@ -260,7 +265,9 @@ function isAuxiliaryMetaColumn(candidate: PdfLine[], counterpart: PdfLine[], pag
 }
 
 function isDateLikeMetaLine(text: string): boolean {
-  return /\b(?:present|current|now|по\s*наст\w*|\d{1,2}[/-]\d{4}|\d{4}[.-]\d{2}|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:т|та)?|апр(?:ель|еля)?|ма[йя]|июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уст|уста)?|сен(?:тябрь|тября)?|окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)\b/i.test(text)
+  return /\b(?:present|current|now|по\s*наст\w*|\d{1,2}[/-]\d{4}|\d{4}[.-]\d{2}|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:т|та)?|апр(?:ель|еля)?|ма[йя]|июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уст|уста)?|сен(?:тябрь|тября)?|окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?)\b/i.test(
+    text,
+  )
 }
 
 function detectColumnSplit(lines: PdfLine[], pageWidth: number): number | null {
@@ -319,9 +326,7 @@ function buildParagraphs(lines: PdfLine[]): string[] {
     )
   })
 
-  return paragraphs
-    .map(normalizeParagraphText)
-    .filter(Boolean)
+  return paragraphs.map(normalizeParagraphText).filter(Boolean)
 }
 
 function getVerticalGaps(lines: PdfLine[]): number[] {
@@ -336,7 +341,11 @@ function getVerticalGaps(lines: PdfLine[]): number[] {
   return gaps
 }
 
-function shouldStartParagraph(previousLine: PdfLine | undefined, line: PdfLine, medianGap: number): boolean {
+function shouldStartParagraph(
+  previousLine: PdfLine | undefined,
+  line: PdfLine,
+  medianGap: number,
+): boolean {
   if (!previousLine) return true
   if (previousLine.isHeading || line.isHeading) return true
   if (previousLine.isBullet || line.isBullet) return true
@@ -401,7 +410,12 @@ function isSoftHyphenBreak(previous: string, next: string): boolean {
   return /-$/.test(previous) && /^[a-zа-яё]/i.test(next)
 }
 
-function shouldAddSpace(previousChar: string, nextChar: string, gap: number, threshold: number): boolean {
+function shouldAddSpace(
+  previousChar: string,
+  nextChar: string,
+  gap: number,
+  threshold: number,
+): boolean {
   if (!previousChar || !nextChar) return false
   if (/\s/.test(previousChar) || /\s/.test(nextChar)) return false
   if (/[(/[{]/.test(previousChar)) return false
@@ -440,8 +454,14 @@ function repairUrlSpacing(value: string): string {
 
 function normalizeDateRanges(value: string): string {
   return value
-    .replace(/\b([A-Za-zА-Яа-яЁё]{3,}\s+\d{4}|\d{4}-\d{2}|\d{1,2}\/\d{4})\s*[-–—]\s*(present|current|now|по\s*наст\w*)\b/gi, '$1 - $2')
-    .replace(/\b([A-Za-zА-Яа-яЁё]{3,}\s+\d{4}|\d{4}-\d{2}|\d{1,2}\/\d{4})\s*[-–—]\s*([A-Za-zА-Яа-яЁё]{3,}\s+\d{4}|\d{4}-\d{2}|\d{1,2}\/\d{4})\b/gi, '$1 - $2')
+    .replace(
+      /\b([A-Za-zА-Яа-яЁё]{3,}\s+\d{4}|\d{4}-\d{2}|\d{1,2}\/\d{4})\s*[-–—]\s*(present|current|now|по\s*наст\w*)\b/gi,
+      '$1 - $2',
+    )
+    .replace(
+      /\b([A-Za-zА-Яа-яЁё]{3,}\s+\d{4}|\d{4}-\d{2}|\d{1,2}\/\d{4})\s*[-–—]\s*([A-Za-zА-Яа-яЁё]{3,}\s+\d{4}|\d{4}-\d{2}|\d{1,2}\/\d{4})\b/gi,
+      '$1 - $2',
+    )
 }
 
 function isBulletLine(text: string): boolean {

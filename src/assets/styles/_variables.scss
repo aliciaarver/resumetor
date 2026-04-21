@@ -17,8 +17,12 @@ $preview-accent: #1e293b;
 $preview-line: #e2e8f0;
 
 // Typography
-$font-ui: 'Inter', system-ui, -apple-system, sans-serif;
-$font-preview: 'Georgia', 'Times New Roman', serif;
+$font-ui:
+  "Inter",
+  system-ui,
+  -apple-system,
+  sans-serif;
+$font-preview: "Georgia", "Times New Roman", serif;
 
 // Spacing
 $sp-1: 4px;

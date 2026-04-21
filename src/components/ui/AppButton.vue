@@ -12,13 +12,16 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
-  size?: 'sm' | 'md'
-  loading?: boolean
-  disabled?: boolean
-  type?: 'button' | 'submit' | 'reset'
-}>(), { variant: 'primary', size: 'md', type: 'button' })
+withDefaults(
+  defineProps<{
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+    size?: 'sm' | 'md'
+    loading?: boolean
+    disabled?: boolean
+    type?: 'button' | 'submit' | 'reset'
+  }>(),
+  { variant: 'primary', size: 'md', type: 'button' },
+)
 </script>
 
 <style scoped lang="scss">
@@ -31,7 +34,10 @@ withDefaults(defineProps<{
   font-weight: 500;
   border-radius: $radius-sm;
   padding: 8px 16px;
-  transition: background 0.15s, color 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    opacity 0.15s;
   white-space: nowrap;
 
   &:disabled {
@@ -47,25 +53,33 @@ withDefaults(defineProps<{
   &--primary {
     background: $color-primary;
     color: #fff;
-    &:hover:not(:disabled) { background: $color-primary-hover; }
+    &:hover:not(:disabled) {
+      background: $color-primary-hover;
+    }
   }
 
   &--secondary {
     background: $color-border;
     color: $color-text;
-    &:hover:not(:disabled) { background: #d0d6e0; }
+    &:hover:not(:disabled) {
+      background: #d0d6e0;
+    }
   }
 
   &--ghost {
     background: transparent;
     color: $color-primary;
-    &:hover:not(:disabled) { background: rgba($color-primary, 0.08); }
+    &:hover:not(:disabled) {
+      background: rgba($color-primary, 0.08);
+    }
   }
 
   &--danger {
     background: transparent;
     color: $color-danger;
-    &:hover:not(:disabled) { background: rgba($color-danger, 0.08); }
+    &:hover:not(:disabled) {
+      background: rgba($color-danger, 0.08);
+    }
   }
 
   &__spinner {
@@ -79,6 +93,8 @@ withDefaults(defineProps<{
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

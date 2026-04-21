@@ -1,11 +1,7 @@
 <template>
   <section class="section">
     <h2 class="section__title">{{ t('form.aboutMe') }}</h2>
-    <AppTextarea
-      v-model="data.aboutMe"
-      :placeholder="t('form.aboutPlaceholder')"
-      :rows="5"
-    />
+    <AppTextarea v-model="data.aboutMe" :placeholder="t('form.aboutPlaceholder')" :rows="5" />
   </section>
 </template>
 

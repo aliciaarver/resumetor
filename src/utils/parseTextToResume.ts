@@ -1,8 +1,12 @@
-import type { ResumeData, WorkExperience, Education, Language, Skill, Project } from '@/types/resume'
-import {
-  resolveParserFeatureFlags,
-  type ParserFeatureFlags,
-} from '@/utils/parserFeatureFlags'
+import type {
+  ResumeData,
+  WorkExperience,
+  Education,
+  Language,
+  Skill,
+  Project,
+} from '@/types/resume'
+import { resolveParserFeatureFlags, type ParserFeatureFlags } from '@/utils/parserFeatureFlags'
 
 interface ParseTextToResumeOptions {
   genericLinkLabel?: string
@@ -60,78 +64,169 @@ interface AnalyzedLine {
 
 const SECTION_ALIASES = {
   about: [
-    'about me', 'about', 'summary', 'profile', 'objective',
-    'professional summary', 'career summary', 'executive summary', 'professional profile',
-    'обо мне', 'о себе', 'профиль', 'кратко о себе', 'профессиональный профиль',
-    'дополнительная информация', 'additional information',
+    'about me',
+    'about',
+    'summary',
+    'profile',
+    'objective',
+    'professional summary',
+    'career summary',
+    'executive summary',
+    'professional profile',
+    'обо мне',
+    'о себе',
+    'профиль',
+    'кратко о себе',
+    'профессиональный профиль',
+    'дополнительная информация',
+    'additional information',
   ],
   experience: [
-    'experience', 'work experience', 'employment', 'career',
-    'professional experience', 'work history', 'relevant experience',
-    'опыт работы', 'опыт', 'работа', 'профессиональный опыт', 'трудовой опыт',
+    'experience',
+    'work experience',
+    'employment',
+    'career',
+    'professional experience',
+    'work history',
+    'relevant experience',
+    'опыт работы',
+    'опыт',
+    'работа',
+    'профессиональный опыт',
+    'трудовой опыт',
   ],
   education: [
-    'education', 'academic', 'qualifications', 'studies', 'academic background',
-    'образование', 'обучение',
+    'education',
+    'academic',
+    'qualifications',
+    'studies',
+    'academic background',
+    'образование',
+    'обучение',
   ],
   skills: [
-    'skills', 'technical skills', 'core skills', 'key skills', 'competencies',
-    'навыки', 'ключевые навыки', 'технические навыки', 'компетенции', 'стек',
+    'skills',
+    'technical skills',
+    'core skills',
+    'key skills',
+    'competencies',
+    'навыки',
+    'ключевые навыки',
+    'технические навыки',
+    'компетенции',
+    'стек',
   ],
   languages: [
-    'languages', 'language', 'language skills', 'foreign languages', 'language proficiency',
-    'языки', 'знание языков', 'владение языками', 'иностранные языки',
+    'languages',
+    'language',
+    'language skills',
+    'foreign languages',
+    'language proficiency',
+    'языки',
+    'знание языков',
+    'владение языками',
+    'иностранные языки',
   ],
   projects: [
-    'projects', 'project experience', 'selected projects', 'certifications', 'certificates',
-    'проекты', 'проектный опыт', 'избранные проекты', 'сертификаты', 'сертификации',
+    'projects',
+    'project experience',
+    'selected projects',
+    'certifications',
+    'certificates',
+    'проекты',
+    'проектный опыт',
+    'избранные проекты',
+    'сертификаты',
+    'сертификации',
   ],
 } as const
 
 // hh.ru specific section headings that should be skipped entirely (not assigned to any bucket)
-const HH_SKIP_SECTIONS_RE = /^(?:желаемая должность и зарплата|желаемая должность|специализации|опыт вождения|additional information)$/i
+const HH_SKIP_SECTIONS_RE =
+  /^(?:желаемая должность и зарплата|желаемая должность|специализации|опыт вождения|additional information)$/i
 
 const MONTH_PATTERN =
   'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|янв(?:арь|аря)?|фев(?:раль|раля)?|мар(?:т|та)?|апр(?:ель|еля)?|ма[йя]|июн(?:ь|я)?|июл(?:ь|я)?|авг(?:уст|уста)?|сен(?:тябрь|тября)?|окт(?:ябрь|ября)?|ноя(?:брь|бря)?|дек(?:абрь|абря)?'
-const MONTH_YEAR_RE = new RegExp(`(?:${MONTH_PATTERN})\\s+\\d{4}|\\d{4}[.-]\\d{2}|\\d{1,2}\\/\\d{4}|\\d{4}\\s*[-–—]\\s*(?:\\d{4}|present|current|now|по\\s*наст)`, 'gi')
+const MONTH_YEAR_RE = new RegExp(
+  `(?:${MONTH_PATTERN})\\s+\\d{4}|\\d{4}[.-]\\d{2}|\\d{1,2}\\/\\d{4}|\\d{4}\\s*[-–—]\\s*(?:\\d{4}|present|current|now|по\\s*наст)`,
+  'gi',
+)
 
 const HUMAN_LANGUAGE_NAMES = new Set([
-  'английский', 'english',
-  'русский', 'russian',
-  'немецкий', 'german', 'deutsch',
-  'французский', 'french',
-  'испанский', 'spanish',
-  'итальянский', 'italian',
-  'португальский', 'portuguese',
-  'китайский', 'chinese', 'mandarin', 'cantonese',
-  'японский', 'japanese',
-  'корейский', 'korean',
-  'арабский', 'arabic',
-  'турецкий', 'turkish',
-  'польский', 'polish',
-  'украинский', 'ukrainian',
-  'белорусский', 'belarusian',
-  'чешский', 'czech',
-  'словацкий', 'slovak',
-  'румынский', 'romanian',
-  'венгерский', 'hungarian',
-  'болгарский', 'bulgarian',
-  'сербский', 'serbian',
-  'хорватский', 'croatian',
-  'нидерландский', 'dutch',
+  'английский',
+  'english',
+  'русский',
+  'russian',
+  'немецкий',
+  'german',
+  'deutsch',
+  'французский',
+  'french',
+  'испанский',
+  'spanish',
+  'итальянский',
+  'italian',
+  'португальский',
+  'portuguese',
+  'китайский',
+  'chinese',
+  'mandarin',
+  'cantonese',
+  'японский',
+  'japanese',
+  'корейский',
+  'korean',
+  'арабский',
+  'arabic',
+  'турецкий',
+  'turkish',
+  'польский',
+  'polish',
+  'украинский',
+  'ukrainian',
+  'белорусский',
+  'belarusian',
+  'чешский',
+  'czech',
+  'словацкий',
+  'slovak',
+  'румынский',
+  'romanian',
+  'венгерский',
+  'hungarian',
+  'болгарский',
+  'bulgarian',
+  'сербский',
+  'serbian',
+  'хорватский',
+  'croatian',
+  'нидерландский',
+  'dutch',
   'голландский',
-  'шведский', 'swedish',
-  'норвежский', 'norwegian',
-  'датский', 'danish',
-  'финский', 'finnish',
-  'греческий', 'greek',
-  'иврит', 'hebrew',
-  'хинди', 'hindi',
-  'тайский', 'thai',
-  'вьетнамский', 'vietnamese',
-  'индонезийский', 'indonesian',
-  'казахский', 'kazakh',
-  'узбекский', 'uzbek',
+  'шведский',
+  'swedish',
+  'норвежский',
+  'norwegian',
+  'датский',
+  'danish',
+  'финский',
+  'finnish',
+  'греческий',
+  'greek',
+  'иврит',
+  'hebrew',
+  'хинди',
+  'hindi',
+  'тайский',
+  'thai',
+  'вьетнамский',
+  'vietnamese',
+  'индонезийский',
+  'indonesian',
+  'казахский',
+  'kazakh',
+  'узбекский',
+  'uzbek',
 ])
 
 const CEFR_LEVEL_MAP: Record<string, Language['proficiency']> = {
@@ -144,29 +239,45 @@ const CEFR_LEVEL_MAP: Record<string, Language['proficiency']> = {
 }
 
 const WORD_LEVEL_MAP: Record<string, Language['proficiency']> = {
-  native: 'Native', родной: 'Native',
-  fluent: 'Fluent', свободно: 'Fluent',
-  advanced: 'Advanced', продвинутый: 'Advanced',
-  intermediate: 'Intermediate', средний: 'Intermediate',
-  basic: 'Basic', beginner: 'Basic', базовый: 'Basic',
+  native: 'Native',
+  родной: 'Native',
+  fluent: 'Fluent',
+  свободно: 'Fluent',
+  advanced: 'Advanced',
+  продвинутый: 'Advanced',
+  intermediate: 'Intermediate',
+  средний: 'Intermediate',
+  basic: 'Basic',
+  beginner: 'Basic',
+  базовый: 'Basic',
 }
 
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i
-const PHONE_RE = /(\+?\d[\d\s()\-]{6,}\d)/
-const URL_RE = /https?:\/\/[^\s]+|(?:www|github|linkedin|t\.me|telegram|vk\.company)[.\w/\-?=&%#@]+/i
+const PHONE_RE = /(\+?\d[\d\s()-]{6,}\d)/
+const URL_RE =
+  /https?:\/\/[^\s]+|(?:www|github|linkedin|t\.me|telegram|vk\.company)[.\w/\-?=&%#@]+/i
 const DATE_RE = new RegExp(MONTH_YEAR_RE.source, 'i')
 const CURRENT_MARKER_RE = /present|current|now|по\s*наст/i
 const HH_RESUME_UPDATED_RE = /(?:резюме обновлено|resume updated)/i
 const LANGUAGE_NAME_RE = new RegExp(`(${[...HUMAN_LANGUAGE_NAMES].join('|')})`, 'gi')
-const PROFICIENCY_RE = /\b(c[12]|b[12]|a[12])\b|native|fluent|advanced|intermediate|basic|beginner|родной|свободно|продвинутый|средний|базовый/i
-const EXPERIENCE_KEYWORD_RE = /\b(engineer|developer|manager|analyst|designer|consultant|lead|director|architect|specialist|intern|owner|founder|qa|tester|devops|product|project|marketing|sales|recruiter|accountant|администратор|аналитик|архитектор|дизайнер|директор|инженер|консультант|менеджер|разработчик|руководитель|специалист|стаж[её]р|тестировщик|маркетолог|продакт|проектный|проджект)\b/i
-const EXPERIENCE_ACTION_RE = /\b(led|built|developed|implemented|optimized|launched|managed|designed|created|improved|delivered|разработал|разработала|внедрил|внедрила|запустил|запустила|оптимизировал|оптимизировала|руководил|руководила|создал|создала|улучшил|улучшила)\b/i
-const COMPANY_RE = /\b(inc|llc|ltd|corp|company|group|studio|agency|gmbh|s\.?a\.?|ooo|ооо|зао|пао|ao|ip|ип)\b/i
-const EDUCATION_KEYWORD_RE = /\b(university|institute|college|academy|school|faculty|department|lyceum|bachelor|master|phd|doctorate|associate|gpa|курс|курсы|университет|институт|академия|колледж|лицей|школа|факультет|кафедра|бакалавр|магистр|аспирант|специалист)\b/i
-const ABOUT_KEYWORD_RE = /\b(summary|profile|objective|overview|highlights|about|обо мне|о себе|профиль|кратко о себе)\b/i
-const SKILL_KEYWORD_RE = /\b(skill|skills|stack|tech stack|tooling|technologies|frameworks|libraries|tools|навык|навыки|стек|технологии|инструменты|фреймворки|библиотеки)\b/i
-const PROJECT_KEYWORD_RE = /\b(project|projects|case study|portfolio|certification|certificate|credential|badge|initiative|launch|integration|migration|проект|проекты|портфолио|кейс|сертификат|сертификация|инициатива|миграция|внедрение)\b/i
-const SKILL_TOKEN_RE = /\b(react|vue|angular|svelte|typescript|javascript|node\.?js|nestjs|express|python|django|flask|fastapi|java|kotlin|swift|php|laravel|go|golang|rust|sql|postgres(?:ql)?|mysql|mongodb|redis|docker|kubernetes|aws|gcp|azure|terraform|ansible|graphql|rest|figma|photoshop|illustrator|sketch|jira|confluence|git|github|gitlab|ci\/cd|linux|html|css|sass|webpack|vite|nuxt|next\.?js|tailwind|pinia|vuex|rxjs|c\+\+|c#|\.net|excel|power bi|tableau|scrum|kanban|аналитика|управление|маркетинг|дизайн|продажи|переговоры|презентации)\b/i
+const PROFICIENCY_RE =
+  /\b(c[12]|b[12]|a[12])\b|native|fluent|advanced|intermediate|basic|beginner|родной|свободно|продвинутый|средний|базовый/i
+const EXPERIENCE_KEYWORD_RE =
+  /\b(engineer|developer|manager|analyst|designer|consultant|lead|director|architect|specialist|intern|owner|founder|qa|tester|devops|product|project|marketing|sales|recruiter|accountant|администратор|аналитик|архитектор|дизайнер|директор|инженер|консультант|менеджер|разработчик|руководитель|специалист|стаж[её]р|тестировщик|маркетолог|продакт|проектный|проджект)\b/i
+const EXPERIENCE_ACTION_RE =
+  /\b(led|built|developed|implemented|optimized|launched|managed|designed|created|improved|delivered|разработал|разработала|внедрил|внедрила|запустил|запустила|оптимизировал|оптимизировала|руководил|руководила|создал|создала|улучшил|улучшила)\b/i
+const COMPANY_RE =
+  /\b(inc|llc|ltd|corp|company|group|studio|agency|gmbh|s\.?a\.?|ooo|ооо|зао|пао|ao|ip|ип)\b/i
+const EDUCATION_KEYWORD_RE =
+  /\b(university|institute|college|academy|school|faculty|department|lyceum|bachelor|master|phd|doctorate|associate|gpa|курс|курсы|университет|институт|академия|колледж|лицей|школа|факультет|кафедра|бакалавр|магистр|аспирант|специалист)\b/i
+const ABOUT_KEYWORD_RE =
+  /\b(summary|profile|objective|overview|highlights|about|обо мне|о себе|профиль|кратко о себе)\b/i
+const SKILL_KEYWORD_RE =
+  /\b(skill|skills|stack|tech stack|tooling|technologies|frameworks|libraries|tools|навык|навыки|стек|технологии|инструменты|фреймворки|библиотеки)\b/i
+const PROJECT_KEYWORD_RE =
+  /\b(project|projects|case study|portfolio|certification|certificate|credential|badge|initiative|launch|integration|migration|проект|проекты|портфолио|кейс|сертификат|сертификация|инициатива|миграция|внедрение)\b/i
+const SKILL_TOKEN_RE =
+  /\b(react|vue|angular|svelte|typescript|javascript|node\.?js|nestjs|express|python|django|flask|fastapi|java|kotlin|swift|php|laravel|go|golang|rust|sql|postgres(?:ql)?|mysql|mongodb|redis|docker|kubernetes|aws|gcp|azure|terraform|ansible|graphql|rest|figma|photoshop|illustrator|sketch|jira|confluence|git|github|gitlab|ci\/cd|linux|html|css|sass|webpack|vite|nuxt|next\.?js|tailwind|pinia|vuex|rxjs|c\+\+|c#|\.net|excel|power bi|tableau|scrum|kanban|аналитика|управление|маркетинг|дизайн|продажи|переговоры|презентации)\b/i
 
 function isSectionHeading(line: string): boolean {
   if (line.includes(':') && line.length > 24) return false
@@ -178,7 +289,9 @@ function detectSection(line: string): keyof typeof SECTION_ALIASES | null {
   const trimmed = normalizeHeading(line)
   if (!trimmed || !isSectionHeading(trimmed)) return null
 
-  for (const [key, aliases] of Object.entries(SECTION_ALIASES) as Array<[keyof typeof SECTION_ALIASES, readonly string[]]>) {
+  for (const [key, aliases] of Object.entries(SECTION_ALIASES) as Array<
+    [keyof typeof SECTION_ALIASES, readonly string[]]
+  >) {
     if (aliases.includes(trimmed)) return key
   }
   return null
@@ -220,7 +333,9 @@ function detectParserProfile(lines: string[]): ParserProfile {
   const text = lines.join('\n').toLowerCase()
 
   if (
-    /желаемая должность|резюме обновлено|опыт вождения|гражданство|проживает|готова к переезду/i.test(text) ||
+    /желаемая должность|резюме обновлено|опыт вождения|гражданство|проживает|готова к переезду/i.test(
+      text,
+    ) ||
     /опыт работы/.test(text)
   ) {
     return 'hh_ru'
@@ -239,14 +354,16 @@ function detectParserProfile(lines: string[]): ParserProfile {
 }
 
 function normalizeHeading(line: string): string {
-  return line
-    .trim()
-    .toLowerCase()
-    .replace(/[.:]+$/, '')
-    // strip trailing "— 5 лет 5 месяцев" or "— 5+ years" style suffixes
-    .replace(/\s*[-–—]\s*\d.*$/, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    line
+      .trim()
+      .toLowerCase()
+      .replace(/[.:]+$/, '')
+      // strip trailing "— 5 лет 5 месяцев" or "— 5+ years" style suffixes
+      .replace(/\s*[-–—]\s*\d.*$/, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 function matchProficiency(context: string): Language['proficiency'] {
@@ -255,7 +372,9 @@ function matchProficiency(context: string): Language['proficiency'] {
   if (cefrMatch) return CEFR_LEVEL_MAP[cefrMatch[1].toLowerCase()] ?? 'Intermediate'
 
   // Fall back to descriptive words
-  const wordMatch = context.match(/(native|fluent|advanced|intermediate|basic|beginner|родной|свободно|продвинутый|средний|базовый)/i)
+  const wordMatch = context.match(
+    /(native|fluent|advanced|intermediate|basic|beginner|родной|свободно|продвинутый|средний|базовый)/i,
+  )
   if (wordMatch) return WORD_LEVEL_MAP[wordMatch[1].toLowerCase()] ?? 'Intermediate'
 
   return 'Intermediate'
@@ -263,24 +382,64 @@ function matchProficiency(context: string): Language['proficiency'] {
 
 function parseMonthYear(str: string): string {
   const months: Record<string, string> = {
-    jan: '01', january: '01', feb: '02', february: '02',
-    mar: '03', march: '03', apr: '04', april: '04',
-    may: '05', jun: '06', june: '06', jul: '07', july: '07',
-    aug: '08', august: '08', sep: '09', september: '09',
-    oct: '10', october: '10', nov: '11', november: '11',
-    dec: '12', december: '12',
-    янв: '01', январь: '01', января: '01',
-    фев: '02', февраль: '02', февраля: '02',
-    мар: '03', март: '03', марта: '03',
-    апр: '04', апрель: '04', апреля: '04',
-    май: '05', мая: '05',
-    июн: '06', июнь: '06', июня: '06',
-    июл: '07', июль: '07', июля: '07',
-    авг: '08', август: '08', августа: '08',
-    сен: '09', сентябрь: '09', сентября: '09',
-    окт: '10', октябрь: '10', октября: '10',
-    ноя: '11', ноябрь: '11', ноября: '11',
-    дек: '12', декабрь: '12', декабря: '12',
+    jan: '01',
+    january: '01',
+    feb: '02',
+    february: '02',
+    mar: '03',
+    march: '03',
+    apr: '04',
+    april: '04',
+    may: '05',
+    jun: '06',
+    june: '06',
+    jul: '07',
+    july: '07',
+    aug: '08',
+    august: '08',
+    sep: '09',
+    september: '09',
+    oct: '10',
+    october: '10',
+    nov: '11',
+    november: '11',
+    dec: '12',
+    december: '12',
+    янв: '01',
+    январь: '01',
+    января: '01',
+    фев: '02',
+    февраль: '02',
+    февраля: '02',
+    мар: '03',
+    март: '03',
+    марта: '03',
+    апр: '04',
+    апрель: '04',
+    апреля: '04',
+    май: '05',
+    мая: '05',
+    июн: '06',
+    июнь: '06',
+    июня: '06',
+    июл: '07',
+    июль: '07',
+    июля: '07',
+    авг: '08',
+    август: '08',
+    августа: '08',
+    сен: '09',
+    сентябрь: '09',
+    сентября: '09',
+    окт: '10',
+    октябрь: '10',
+    октября: '10',
+    ноя: '11',
+    ноябрь: '11',
+    ноября: '11',
+    дек: '12',
+    декабрь: '12',
+    декабря: '12',
   }
 
   // YYYY-MM or YYYY.MM (but not YYYY-YYYY range)
@@ -332,8 +491,14 @@ function extractDates(text: string): { from: string; to: string; isCurrent: bool
   return { from, to, isCurrent: current }
 }
 
-export function parseTextToResumeDetailed(text: string, options: ParseTextToResumeOptions = {}): DetailedResumeParseResult {
-  const rawLines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+export function parseTextToResumeDetailed(
+  text: string,
+  options: ParseTextToResumeOptions = {},
+): DetailedResumeParseResult {
+  const rawLines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
   const lines = stripFooterLines(rawLines)
   const profile = detectParserProfile(lines)
   const genericLinkLabel = options.genericLinkLabel ?? 'Link'
@@ -395,7 +560,9 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
         !looksLikePersonalMetaLine(trimmed) &&
         !looksLikeDurationSummary(trimmed) &&
         !HH_SKIP_SECTIONS_RE.test(trimmed) &&
-        !/^(?:специализации|занятость|график работы|желательное время|опыт вождения)/i.test(trimmed) &&
+        !/^(?:специализации|занятость|график работы|желательное время|опыт вождения)/i.test(
+          trimmed,
+        ) &&
         !/^[—\-•]/.test(trimmed)
       ) {
         result.personal!.position = trimmed
@@ -458,23 +625,19 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
       inferredSection !== currentSection
     ) {
       const shouldKeepExplicitExperience =
-        currentSection === 'experience' &&
-        inferredSection === 'skills' &&
-        !line.explicitSection
+        currentSection === 'experience' && inferredSection === 'skills' && !line.explicitSection
       const shouldKeepExplicitAbout =
-        currentSection === 'about' &&
-        inferredSection === 'experience' &&
-        !line.explicitSection
+        currentSection === 'about' && inferredSection === 'experience' && !line.explicitSection
 
       if (shouldKeepExplicitExperience || shouldKeepExplicitAbout) {
         // Stay inside the explicit EXPERIENCE block even on stack-heavy lines.
       } else {
-      const currentScore = line.scores[currentSection]
-      const inferredScore = line.scores[inferredSection]
-      if (inferredScore >= currentScore + 2 && inferredScore >= 5) {
-        currentSection = inferredSection
-        inExplicitSection = false
-      }
+        const currentScore = line.scores[currentSection]
+        const inferredScore = line.scores[inferredSection]
+        if (inferredScore >= currentScore + 2 && inferredScore >= 5) {
+          currentSection = inferredSection
+          inExplicitSection = false
+        }
       }
     }
 
@@ -495,7 +658,11 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
         } else {
           currentSection = inferredSection
         }
-      } else if (featureFlags.enableAboutFallbackInference && !structuredSectionSeen && looksLikeAboutFallback(line)) {
+      } else if (
+        featureFlags.enableAboutFallbackInference &&
+        !structuredSectionSeen &&
+        looksLikeAboutFallback(line)
+      ) {
         currentSection = 'about'
       }
     }
@@ -504,8 +671,15 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
       continue
     }
 
-    if (!inferredSection && !shouldContinueSection(currentSection, line, previousLine, nextLine, featureFlags)) {
-      if (featureFlags.enableAboutFallbackInference && !structuredSectionSeen && looksLikeAboutFallback(line)) {
+    if (
+      !inferredSection &&
+      !shouldContinueSection(currentSection, line, previousLine, nextLine, featureFlags)
+    ) {
+      if (
+        featureFlags.enableAboutFallbackInference &&
+        !structuredSectionSeen &&
+        looksLikeAboutFallback(line)
+      ) {
         sectionBuckets.about.push(line.text)
       }
       continue
@@ -523,10 +697,12 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
     ? parseExperienceBlock(stripFooterLines(explicitSectionBuckets.experience), profile)
     : []
   const inferredWorkScore = scoreWorkEntries(inferredWorkExperience, sectionBuckets.experience)
-  const explicitWorkScore = scoreWorkEntries(explicitWorkExperience, explicitSectionBuckets.experience)
-  result.workExperience = explicitWorkScore > inferredWorkScore
-    ? explicitWorkExperience
-    : inferredWorkExperience
+  const explicitWorkScore = scoreWorkEntries(
+    explicitWorkExperience,
+    explicitSectionBuckets.experience,
+  )
+  result.workExperience =
+    explicitWorkScore > inferredWorkScore ? explicitWorkExperience : inferredWorkExperience
   result.education = parseEducationBlock(sectionBuckets.education)
   const inferredSkills = parseSkillsBlock(sectionBuckets.skills, profile)
   const explicitSkills = explicitSectionBuckets.skills.length
@@ -534,18 +710,18 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
     : []
   const inferredSkillsScore = scoreSkills(inferredSkills, sectionBuckets.skills)
   const explicitSkillsScore = scoreSkills(explicitSkills, explicitSectionBuckets.skills)
-  result.skills = explicitSkillsScore > inferredSkillsScore
-    ? explicitSkills
-    : inferredSkills
+  result.skills = explicitSkillsScore > inferredSkillsScore ? explicitSkills : inferredSkills
   result.languages = parseLanguagesBlock(sectionBuckets.languages)
   result.projects = parseProjectsBlock(sectionBuckets.projects)
 
-  const effectiveExperienceRaw = explicitWorkScore > inferredWorkScore
-    ? stripFooterLines(explicitSectionBuckets.experience)
-    : sectionBuckets.experience
-  const effectiveSkillsRaw = explicitSkillsScore > inferredSkillsScore
-    ? stripFooterLines(explicitSectionBuckets.skills)
-    : sectionBuckets.skills
+  const effectiveExperienceRaw =
+    explicitWorkScore > inferredWorkScore
+      ? stripFooterLines(explicitSectionBuckets.experience)
+      : sectionBuckets.experience
+  const effectiveSkillsRaw =
+    explicitSkillsScore > inferredSkillsScore
+      ? stripFooterLines(explicitSectionBuckets.skills)
+      : sectionBuckets.skills
 
   return {
     resume: result,
@@ -561,7 +737,10 @@ export function parseTextToResumeDetailed(text: string, options: ParseTextToResu
   }
 }
 
-export function parseTextToResume(text: string, options: ParseTextToResumeOptions = {}): Partial<ResumeData> {
+export function parseTextToResume(
+  text: string,
+  options: ParseTextToResumeOptions = {},
+): Partial<ResumeData> {
   return parseTextToResumeDetailed(text, options).resume
 }
 
@@ -612,10 +791,13 @@ function parsePersonalInfo(lines: string[], genericLinkLabel: string): ResumeDat
       if (seenLinks.has(url)) continue
 
       const lowerUrl = url.toLowerCase()
-      const label = lowerUrl.includes('github') ? 'GitHub'
-        : lowerUrl.includes('linkedin') ? 'LinkedIn'
-        : lowerUrl.includes('t.me') || lowerUrl.includes('telegram') ? 'Telegram'
-        : genericLinkLabel
+      const label = lowerUrl.includes('github')
+        ? 'GitHub'
+        : lowerUrl.includes('linkedin')
+          ? 'LinkedIn'
+          : lowerUrl.includes('t.me') || lowerUrl.includes('telegram')
+            ? 'Telegram'
+            : genericLinkLabel
 
       personal.links.push({
         id: crypto.randomUUID(),
@@ -642,23 +824,26 @@ function parsePersonalInfo(lines: string[], genericLinkLabel: string): ResumeDat
 
   applyNameParts(personal)
 
-  const remainingLines = lines.filter((line) =>
-    !EMAIL_RE.test(line) &&
-    !PHONE_RE.test(line) &&
-    !URL_RE.test(line) &&
-    !detectSection(line) &&
-    !HH_RESUME_UPDATED_RE.test(line)
+  const remainingLines = lines.filter(
+    (line) =>
+      !EMAIL_RE.test(line) &&
+      !PHONE_RE.test(line) &&
+      !URL_RE.test(line) &&
+      !detectSection(line) &&
+      !HH_RESUME_UPDATED_RE.test(line),
   )
 
   // Birth date: explicit label "Дата рождения: 19 декабря 1999" OR standalone Russian text date
-  const RU_DATE_IN_LINE_RE = /\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}/i
-  const birthLine = remainingLines.find((line) =>
-    /\b(?:дата рождения|birth date|born)\b/i.test(line) ||
-    RU_DATE_IN_LINE_RE.test(line)
+  const RU_DATE_IN_LINE_RE =
+    /\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}/i
+  const birthLine = remainingLines.find(
+    (line) => /\b(?:дата рождения|birth date|born)\b/i.test(line) || RU_DATE_IN_LINE_RE.test(line),
   )
   if (birthLine) {
     personal.birthDate = normalizeBirthDate(
-      birthLine.replace(/\b(?:дата рождения|birth date|born|родилась|родился)\b[:\s-]*/i, '').trim()
+      birthLine
+        .replace(/\b(?:дата рождения|birth date|born|родилась|родился)\b[:\s-]*/i, '')
+        .trim(),
     )
   }
 
@@ -669,7 +854,9 @@ function parsePersonalInfo(lines: string[], genericLinkLabel: string): ResumeDat
     personal.gender = genderMatch?.[1]?.trim() ?? ''
     personal.age = ageMatch ? `${ageMatch[1]} ${ageMatch[2]}`.trim() : ''
     if (!personal.birthDate) {
-      const trailingBirth = genderAgeLine.match(/(?:родил[а-я]*|born)\s*([0-9]{1,2}[.\-/][0-9]{1,2}[.\-/][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i)
+      const trailingBirth = genderAgeLine.match(
+        /(?:родил[а-я]*|born)\s*([0-9]{1,2}[.\-/][0-9]{1,2}[.\-/][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+      )
       if (trailingBirth?.[1]) {
         personal.birthDate = normalizeBirthDate(trailingBirth[1])
       }
@@ -689,7 +876,9 @@ function parsePersonalInfo(lines: string[], genericLinkLabel: string): ResumeDat
     personal.location = livesInLine.replace(/^проживает[:\s]*/i, '').trim()
   }
 
-  const citizenshipLine = remainingLines.find((line) => /\b(?:гражданство|citizenship)\b/i.test(line))
+  const citizenshipLine = remainingLines.find((line) =>
+    /\b(?:гражданство|citizenship)\b/i.test(line),
+  )
   if (citizenshipLine) {
     // hh.ru format: "Гражданство: Россия, есть разрешение на работу: Россия"
     // Extract just the citizenship value (before any "есть разрешение" suffix)
@@ -706,21 +895,35 @@ function parsePersonalInfo(lines: string[], genericLinkLabel: string): ResumeDat
     }
   }
 
-  const workPermitLine = remainingLines.find((line) =>
-    /\b(?:разрешени[ея] на работу|work permit|имеется разрешение на работу)\b/i.test(line) &&
-    line !== citizenshipLine
+  const workPermitLine = remainingLines.find(
+    (line) =>
+      /\b(?:разрешени[ея] на работу|work permit|имеется разрешение на работу)\b/i.test(line) &&
+      line !== citizenshipLine,
   )
   if (workPermitLine) {
-    personal.workPermit = workPermitLine.replace(/\b(?:разрешени[ея] на работу|work permit|имеется разрешение на работу|есть разрешение на работу)\b[:\s-]*/i, '').trim()
+    personal.workPermit = workPermitLine
+      .replace(
+        /\b(?:разрешени[ея] на работу|work permit|имеется разрешение на работу|есть разрешение на работу)\b[:\s-]*/i,
+        '',
+      )
+      .trim()
   }
 
-  const workFormatLine = remainingLines.find((line) =>
-    /\b(?:формат(?:ы)? работы|занятость|work format|work formats|employment type)\b/i.test(line) ||
-    /\b(?:remote|hybrid|office|onsite|full[- ]time|part[- ]time|contract|freelance|удаленн|гибрид|офис|полный день|частичн|проектная работа)\b/i.test(line)
+  const workFormatLine = remainingLines.find(
+    (line) =>
+      /\b(?:формат(?:ы)? работы|занятость|work format|work formats|employment type)\b/i.test(
+        line,
+      ) ||
+      /\b(?:remote|hybrid|office|onsite|full[- ]time|part[- ]time|contract|freelance|удаленн|гибрид|офис|полный день|частичн|проектная работа)\b/i.test(
+        line,
+      ),
   )
   if (workFormatLine) {
     personal.workFormats = splitTagList(
-      workFormatLine.replace(/\b(?:формат(?:ы)? работы|занятость|work format|work formats|employment type)\b[:\s-]*/i, '')
+      workFormatLine.replace(
+        /\b(?:формат(?:ы)? работы|занятость|work format|work formats|employment type)\b[:\s-]*/i,
+        '',
+      ),
     )
   }
 
@@ -744,20 +947,17 @@ function parsePersonalInfo(lines: string[], genericLinkLabel: string): ResumeDat
     return line.length > 1
   })
 
-  const locationLine = candidateLines.find((line) =>
-    line.length <= 80 &&
-    !EXPERIENCE_KEYWORD_RE.test(line) &&
-    !looksLikePersonalMetaLine(line)
+  const locationLine = candidateLines.find(
+    (line) =>
+      line.length <= 80 && !EXPERIENCE_KEYWORD_RE.test(line) && !looksLikePersonalMetaLine(line),
   )
   if (locationLine) {
     personal.location = normalizePersonalValue(locationLine)
     consumed.add(locationLine)
   }
 
-  const positionLine = candidateLines.find((line) =>
-    !consumed.has(line) &&
-    line.length <= 100 &&
-    !looksLikePersonalMetaLine(line)
+  const positionLine = candidateLines.find(
+    (line) => !consumed.has(line) && line.length <= 100 && !looksLikePersonalMetaLine(line),
   )
   if (positionLine) {
     personal.position = normalizePersonalValue(positionLine)
@@ -808,11 +1008,11 @@ function buildParseBlockMetrics(
       score: roundScore(
         clamp01(
           (personal.fullName.trim() ? 0.45 : 0) +
-          (personal.position.trim() ? 0.15 : 0) +
-          (personal.location.trim() ? 0.1 : 0) +
-          (personal.phone.trim() ? 0.2 : 0) +
-          Math.min(0.25, (personal.links?.filter((link) => link.url.trim()).length ?? 0) * 0.12)
-        )
+            (personal.position.trim() ? 0.15 : 0) +
+            (personal.location.trim() ? 0.1 : 0) +
+            (personal.phone.trim() ? 0.2 : 0) +
+            Math.min(0.25, (personal.links?.filter((link) => link.url.trim()).length ?? 0) * 0.12),
+        ),
       ),
       rawText: lines.slice(0, 35).join('\n').trim(),
       extractedCount: countFilledPersonalFields(personal),
@@ -884,7 +1084,8 @@ function analyzeLine(line: string, index: number, totalLines: number): AnalyzedL
 
   if (hasAboutKeyword) scores.about += 4
   if (isSentenceLike) scores.about += index < Math.max(8, totalLines * 0.2) ? 2 : 1
-  if (!hasDate && !hasLanguage && !isContactLike && index < 6 && line.length <= 120) scores.about += 1
+  if (!hasDate && !hasLanguage && !isContactLike && index < 6 && line.length <= 120)
+    scores.about += 1
 
   if (hasDate) scores.experience += 3
   if (hasExperienceKeyword) scores.experience += 4
@@ -905,7 +1106,8 @@ function analyzeLine(line: string, index: number, totalLines: number): AnalyzedL
   if (hasLanguage && /[,/|]/.test(line)) scores.languages += 1
 
   if (hasProjectKeyword) scores.projects += 4
-  if (/(https?:\/\/|www\.|github\.com|linkedin\.com|t\.me|telegram)/i.test(line)) scores.projects += 2
+  if (/(https?:\/\/|www\.|github\.com|linkedin\.com|t\.me|telegram)/i.test(line))
+    scores.projects += 2
   if (hasDate) scores.projects += 1
   if (isBullet && (hasProjectKeyword || isSentenceLike)) scores.projects += 1
 
@@ -990,7 +1192,12 @@ function inferSectionForLine(
   if (line.isBullet && currentSection === 'experience') {
     contextualScores.experience += 2
   }
-  if (featureFlags.enableAboutFallbackInference && line.isSentenceLike && currentSection === 'about' && !structuredSectionSeen) {
+  if (
+    featureFlags.enableAboutFallbackInference &&
+    line.isSentenceLike &&
+    currentSection === 'about' &&
+    !structuredSectionSeen
+  ) {
     contextualScores.about += 1.5
   }
   if (line.hasDate && nextLine?.bestSection === 'education') {
@@ -1008,7 +1215,11 @@ function inferSectionForLine(
   if (line.hasLanguage && currentSection === 'languages') {
     contextualScores.languages += 2
   }
-  if (!line.hasDate && currentSection === 'education' && previousLine?.bestSection === 'education') {
+  if (
+    !line.hasDate &&
+    currentSection === 'education' &&
+    previousLine?.bestSection === 'education'
+  ) {
     contextualScores.education += 1
   }
   if (currentSection === 'projects' && line.isSentenceLike) {
@@ -1048,26 +1259,29 @@ function shouldContinueSection(
   if (line.bestSection === section) return true
   if (section === 'about') return line.isSentenceLike && !line.hasDate && !line.hasLanguage
   if (section === 'skills') {
-    return line.hasSkillKeyword || (
-      featureFlags.enableLooseSkillsContinuation &&
-      line.isBullet &&
-      line.text.length < 120
+    return (
+      line.hasSkillKeyword ||
+      (featureFlags.enableLooseSkillsContinuation && line.isBullet && line.text.length < 120)
     )
   }
   if (section === 'languages') {
-    return line.hasLanguage || (
-      featureFlags.enableLooseLanguagesContinuation &&
-      line.hasProficiency
+    return (
+      line.hasLanguage || (featureFlags.enableLooseLanguagesContinuation && line.hasProficiency)
     )
   }
   if (section === 'projects') {
-    return line.hasProjectKeyword || (
-      featureFlags.enableLooseProjectsContinuation &&
-      (line.isSentenceLike || URL_RE.test(line.text))
+    return (
+      line.hasProjectKeyword ||
+      (featureFlags.enableLooseProjectsContinuation &&
+        (line.isSentenceLike || URL_RE.test(line.text)))
     )
   }
   if (section === 'education') {
-    return line.hasDate || EDUCATION_KEYWORD_RE.test(line.text) || previousLine?.bestSection === 'education'
+    return (
+      line.hasDate ||
+      EDUCATION_KEYWORD_RE.test(line.text) ||
+      previousLine?.bestSection === 'education'
+    )
   }
   if (section === 'experience') {
     return (
@@ -1075,12 +1289,10 @@ function shouldContinueSection(
       line.isBullet ||
       EXPERIENCE_KEYWORD_RE.test(line.text) ||
       previousLine?.bestSection === 'experience' ||
-      (
-        Boolean(nextLine?.hasDate) &&
+      (Boolean(nextLine?.hasDate) &&
         !line.isContactLike &&
         !/^(?:stack|стек)\s*:/i.test(line.text) &&
-        line.text.length <= 120
-      ) ||
+        line.text.length <= 120) ||
       (looksLikeEntryHeaderPrelude(line.text) && Boolean(nextLine?.hasDate))
     )
   }
@@ -1118,7 +1330,9 @@ function splitEntries(lines: string[]): string[][] {
     const line = lines[index]
     const nextLine = lines[index + 1]
     const hasDate = DATE_RE.test(line) || CURRENT_MARKER_RE.test(line)
-    const currentHasDate = current.some((entryLine) => DATE_RE.test(entryLine) || CURRENT_MARKER_RE.test(entryLine))
+    const currentHasDate = current.some(
+      (entryLine) => DATE_RE.test(entryLine) || CURRENT_MARKER_RE.test(entryLine),
+    )
 
     const startsCompanyFirstEntry =
       !hasDate &&
@@ -1173,7 +1387,10 @@ function looksLikeJobTitle(line: string): boolean {
 
 function stripExperienceDurationSuffix(line: string): string {
   return line
-    .replace(/\s+\d+(?:\s*[.,]\s*\d+)?\s*\+?\s*(?:years?|yrs?|год(?:а)?|лет|месяц(?:а|ев)?)(?:\s+experience)?\s*$/i, '')
+    .replace(
+      /\s+\d+(?:\s*[.,]\s*\d+)?\s*\+?\s*(?:years?|yrs?|год(?:а)?|лет|месяц(?:а|ев)?)(?:\s+experience)?\s*$/i,
+      '',
+    )
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -1198,23 +1415,25 @@ function normalizeSkillName(value: string, profile: ParserProfile = 'generic'): 
     .trim()
 
   if (profile === 'hh_ru') {
-    return normalized
-      .replace(/^@tanstack$/i, '')
-      .trim()
+    return normalized.replace(/^@tanstack$/i, '').trim()
   }
 
   return normalized
 }
 
 function extractEmployerFromDateLine(line: string): string {
-  return normalizeCompanyName(stripExperienceDurationSuffix(cleanLine(
-    line
-      .replace(new RegExp(MONTH_YEAR_RE.source, 'gi'), ' ')
-      .replace(CURRENT_MARKER_RE, ' ')
-      .replace(/^[\s\-–—|,:;]+/, '')
-      .replace(/[\s\-–—|,:;]+$/, '')
-      .replace(/\s+/g, ' ')
-  )))
+  return normalizeCompanyName(
+    stripExperienceDurationSuffix(
+      cleanLine(
+        line
+          .replace(new RegExp(MONTH_YEAR_RE.source, 'gi'), ' ')
+          .replace(CURRENT_MARKER_RE, ' ')
+          .replace(/^[\s\-–—|,:;]+/, '')
+          .replace(/[\s\-–—|,:;]+$/, '')
+          .replace(/\s+/g, ' '),
+      ),
+    ),
+  )
 }
 
 function extractRoleTitle(line: string): string {
@@ -1228,8 +1447,12 @@ function looksLikeRoleTitle(line: string): boolean {
 
   return (
     EXPERIENCE_KEYWORD_RE.test(line) ||
-    /\b(?:senior|middle|junior|lead|staff|principal|intern|ведущий|старший|младший|стаж[её]р)\b/i.test(line) ||
-    /\b(?:frontend|front[- ]?end|backend|back[- ]?end|full[- ]?stack|fullstack|mobile|ios|android|web|qa|sdet|devops|ux|ui)\b/i.test(line)
+    /\b(?:senior|middle|junior|lead|staff|principal|intern|ведущий|старший|младший|стаж[её]р)\b/i.test(
+      line,
+    ) ||
+    /\b(?:frontend|front[- ]?end|backend|back[- ]?end|full[- ]?stack|fullstack|mobile|ios|android|web|qa|sdet|devops|ux|ui)\b/i.test(
+      line,
+    )
   )
 }
 
@@ -1252,10 +1475,7 @@ function looksLikeCompanyUrlLine(line: string, company: string): boolean {
 
   if (!normalizedCompany) return label.split(/\s+/).length <= 6
 
-  return (
-    normalizedLabel.includes(normalizedCompany) ||
-    normalizedCompany.includes(normalizedLabel)
-  )
+  return normalizedLabel.includes(normalizedCompany) || normalizedCompany.includes(normalizedLabel)
 }
 
 function looksLikeEntryHeaderPrelude(line: string): boolean {
@@ -1273,11 +1493,15 @@ function looksLikeEntryHeaderPrelude(line: string): boolean {
 
 function looksLikePersonalMetaLine(line: string): boolean {
   // \b doesn't work with Cyrillic — use substring/prefix checks
-  return /(?:^|\s)(?:гражданство|citizenship|дата рождения|birth date|born|удаленн|гибрид|разрешени[ея] на работу|work permit|проживает|проживаю|занятость|специализаци[яи])(?:\s|:|,|$)/i.test(line) ||
+  return (
+    /(?:^|\s)(?:гражданство|citizenship|дата рождения|birth date|born|удаленн|гибрид|разрешени[ея] на работу|work permit|проживает|проживаю|занятость|специализаци[яи])(?:\s|:|,|$)/i.test(
+      line,
+    ) ||
     /(?:^|\s)(?:женщина|мужчина|female|male)(?:\s|,|$)/i.test(line) ||
     /\b(?:remote|hybrid|office|onsite|work permit)\b/i.test(line) ||
     /готов[а]?\s+к\s+(?:переезду|командировкам)/i.test(line) ||
     /^(?:график работы|желательное время в пути)/i.test(line)
+  )
 }
 
 function normalizePersonalValue(line: string): string {
@@ -1326,9 +1550,11 @@ function stripFooterLines(lines: string[]): string[] {
 }
 
 function looksLikeGenderAgeLine(line: string): boolean {
-  return /(?:^|\s)(?:женщина|мужчина|female|male)(?:\s|,|$)/i.test(line) ||
+  return (
+    /(?:^|\s)(?:женщина|мужчина|female|male)(?:\s|,|$)/i.test(line) ||
     /\d{1,2}\s*(?:лет|года|год)(?:\s|,|$)/i.test(line) ||
     /\b\d{1,2}\s*(?:years?|yrs?)\b/i.test(line)
+  )
 }
 
 function applyNameParts(personal: ResumeData['personal']) {
@@ -1342,18 +1568,29 @@ function applyNameParts(personal: ResumeData['personal']) {
 }
 
 const BIRTH_MONTH_MAP: Record<string, string> = {
-  января: '01', янв: '01',
-  февраля: '02', фев: '02',
-  марта: '03', мар: '03',
-  апреля: '04', апр: '04',
+  января: '01',
+  янв: '01',
+  февраля: '02',
+  фев: '02',
+  марта: '03',
+  мар: '03',
+  апреля: '04',
+  апр: '04',
   мая: '05',
-  июня: '06', июн: '06',
-  июля: '07', июл: '07',
-  августа: '08', авг: '08',
-  сентября: '09', сен: '09',
-  октября: '10', окт: '10',
-  ноября: '11', ноя: '11',
-  декабря: '12', дек: '12',
+  июня: '06',
+  июн: '06',
+  июля: '07',
+  июл: '07',
+  августа: '08',
+  авг: '08',
+  сентября: '09',
+  сен: '09',
+  октября: '10',
+  окт: '10',
+  ноября: '11',
+  ноя: '11',
+  декабря: '12',
+  дек: '12',
 }
 
 function normalizeBirthDate(value: string): string {
@@ -1387,7 +1624,12 @@ function looksLikeTopPersonalMeta(line: string, index: number): boolean {
   if (looksLikeGenderAgeLine(line)) return true
   // Birth date line
   if (/\b(?:дата рождения|birth date|born)\b/i.test(line)) return true
-  if (/\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}/i.test(line)) return true
+  if (
+    /\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}/i.test(
+      line,
+    )
+  )
+    return true
   // hh.ru relocation/trip readiness lines
   if (/готов[а]?\s+к\s+(?:переезду|командировкам)/i.test(line)) return true
   // Lines starting with "Проживает:" or similar
@@ -1403,8 +1645,11 @@ function looksLikeExperienceNoise(line: string): boolean {
   // hh.ru industry tag lines — long comma-separated industry category strings
   // e.g. "Информационные технологии, системная интеграция, интернет"
   if (
-    /^(?:информационные технологии|сми\s*[,;]|маркетинг\s*[,;]|internet|media\s*[,;]|other:|frontend:|реклама\s*[,;]|розничная торговля|финансы\s*[,;]|банки\s*[,;]|страхование\s*[,;]|строительство\s*[,;]|медицина\s*[,;]|образование\s*[,;]|производство\s*[,;]|транспорт\s*[,;]|логистика\s*[,;]|консалтинг\s*[,;])/i.test(line)
-  ) return true
+    /^(?:информационные технологии|сми\s*[,;]|маркетинг\s*[,;]|internet|media\s*[,;]|other:|frontend:|реклама\s*[,;]|розничная торговля|финансы\s*[,;]|банки\s*[,;]|страхование\s*[,;]|строительство\s*[,;]|медицина\s*[,;]|образование\s*[,;]|производство\s*[,;]|транспорт\s*[,;]|логистика\s*[,;]|консалтинг\s*[,;])/i.test(
+      line,
+    )
+  )
+    return true
 
   // Generic hh.ru industry pattern: multi-word comma-separated line with only letters/spaces/commas,
   // NO skill tokens, NO experience keywords, starts uppercase — industry category strings
@@ -1422,10 +1667,16 @@ function looksLikeExperienceNoise(line: string): boolean {
     /^[А-ЯЁA-Z]/.test(line) &&
     /^[А-Яа-яЁёA-Za-z\s,]+$/.test(line) && // only letters, spaces, commas
     line.split(',').every((part) => part.trim().split(/\s+/).length <= 4) // each segment is ≤4 words
-  ) return true
+  )
+    return true
 
   // Bullet-prefixed industry noise lines from hh.ru
-  if (/^[•\-]\s*(?:разработка|маркетинговые|рекламные|btl|designer|event|pr|internet|software|system integration|интернет-компания|системная интеграция|автоматизаци)/i.test(line)) return true
+  if (
+    /^[•-]\s*(?:разработка|маркетинговые|рекламные|btl|designer|event|pr|internet|software|system integration|интернет-компания|системная интеграция|автоматизаци)/i.test(
+      line,
+    )
+  )
+    return true
 
   return false
 }
@@ -1438,7 +1689,8 @@ function looksLikeDurationSummary(line: string): boolean {
 }
 
 // Known city names for company/location split disambiguation
-const KNOWN_CITIES_RE = /^(?:москва|санкт-петербург|спб|питер|екатеринбург|новосибирск|казань|нижний новгород|самара|омск|уфа|краснодар|воронеж|пермь|волгоград|ростов|саратов|тюмень|тольятти|барнаул|ижевск|красноярск|москве|moscow|saint.?petersburg|novosibirsk)$/i
+const KNOWN_CITIES_RE =
+  /^(?:москва|санкт-петербург|спб|питер|екатеринбург|новосибирск|казань|нижний новгород|самара|омск|уфа|краснодар|воронеж|пермь|волгоград|ростов|саратов|тюмень|тольятти|барнаул|ижевск|красноярск|москве|moscow|saint.?petersburg|novosibirsk)$/i
 
 function parseExperienceBlock(lines: string[], profile: ParserProfile): WorkExperience[] {
   if (profile === 'en_cv') {
@@ -1449,115 +1701,125 @@ function parseExperienceBlock(lines: string[], profile: ParserProfile): WorkExpe
 }
 
 function parseExperienceBlockHh(lines: string[]): WorkExperience[] {
-  return splitEntries(lines).map((entryLines) => {
-    // Step 1: find date line
-    const dateLineIndex = entryLines.findIndex((line) => DATE_RE.test(line) || CURRENT_MARKER_RE.test(line))
-    const dateLine = dateLineIndex >= 0 ? entryLines[dateLineIndex] : entryLines[0]
-    const leadingDateLines = entryLines
-      .slice(0, 3)
-      .filter((line) => DATE_RE.test(line) || CURRENT_MARKER_RE.test(line))
-    const { from, to, isCurrent } = extractDates(leadingDateLines.join(' '))
-    const companyFromDateLine = extractEmployerFromDateLine(dateLine)
-
-    // Step 2: all non-date lines
-    const nonDateLines = entryLines.filter((_, i) => i !== dateLineIndex)
-
-    // Step 3: normalize body once and extract semantic markers from all lines.
-    const normalizedLines = nonDateLines
-      .map((line) => ({
-        raw: preserveStructuredLine(line),
-        clean: cleanLine(line),
-        wasBullet: /^[•\-–—]/.test(line),
-        hasUrl: URL_RE.test(line),
-      }))
-      .filter((line) => line.clean)
-      .filter((line) => !looksLikeDurationSummary(line.clean))
-      .filter((line) => !looksLikeExperienceNoise(line.clean))
-
-    // Step 4: parse company from the date line first, then fall back to early header lines.
-    let company = companyFromDateLine
-    let location = ''
-
-    for (const line of normalizedLines.slice(0, 6)) {
-      const clean = stripExperienceDurationSuffix(
-        cleanLine(line.clean.replace(new RegExp(MONTH_YEAR_RE.source, 'gi'), '').replace(/[-–—|]+/g, ' '))
+  return splitEntries(lines)
+    .map((entryLines) => {
+      // Step 1: find date line
+      const dateLineIndex = entryLines.findIndex(
+        (line) => DATE_RE.test(line) || CURRENT_MARKER_RE.test(line),
       )
-      if (!clean) continue
-      if (looksLikeRoleTitle(clean)) continue
-      if (/^роль\s*:/i.test(clean)) continue
+      const dateLine = dateLineIndex >= 0 ? entryLines[dateLineIndex] : entryLines[0]
+      const leadingDateLines = entryLines
+        .slice(0, 3)
+        .filter((line) => DATE_RE.test(line) || CURRENT_MARKER_RE.test(line))
+      const { from, to, isCurrent } = extractDates(leadingDateLines.join(' '))
+      const companyFromDateLine = extractEmployerFromDateLine(dateLine)
 
-      if (!company) {
-        const parts = clean.split(',').map(p => p.trim()).filter(Boolean)
-        if (parts.length > 1 && KNOWN_CITIES_RE.test(parts[parts.length - 1])) {
-          company = normalizeCompanyName(parts.slice(0, -1).join(', '))
-          location = parts[parts.length - 1]
-        } else {
-          company = normalizeCompanyName(clean)
+      // Step 2: all non-date lines
+      const nonDateLines = entryLines.filter((_, i) => i !== dateLineIndex)
+
+      // Step 3: normalize body once and extract semantic markers from all lines.
+      const normalizedLines = nonDateLines
+        .map((line) => ({
+          raw: preserveStructuredLine(line),
+          clean: cleanLine(line),
+          wasBullet: /^[•\-–—]/.test(line),
+          hasUrl: URL_RE.test(line),
+        }))
+        .filter((line) => line.clean)
+        .filter((line) => !looksLikeDurationSummary(line.clean))
+        .filter((line) => !looksLikeExperienceNoise(line.clean))
+
+      // Step 4: parse company from the date line first, then fall back to early header lines.
+      let company = companyFromDateLine
+      let location = ''
+
+      for (const line of normalizedLines.slice(0, 6)) {
+        const clean = stripExperienceDurationSuffix(
+          cleanLine(
+            line.clean.replace(new RegExp(MONTH_YEAR_RE.source, 'gi'), '').replace(/[-–—|]+/g, ' '),
+          ),
+        )
+        if (!clean) continue
+        if (looksLikeRoleTitle(clean)) continue
+        if (/^роль\s*:/i.test(clean)) continue
+
+        if (!company) {
+          const parts = clean
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean)
+          if (parts.length > 1 && KNOWN_CITIES_RE.test(parts[parts.length - 1])) {
+            company = normalizeCompanyName(parts.slice(0, -1).join(', '))
+            location = parts[parts.length - 1]
+          } else {
+            company = normalizeCompanyName(clean)
+          }
+        } else if (!location && KNOWN_CITIES_RE.test(clean)) {
+          location = clean
         }
-      } else if (!location && KNOWN_CITIES_RE.test(clean)) {
-        location = clean
       }
-    }
 
-    let companyUrl = ''
-    for (const line of normalizedLines) {
-      if (!looksLikeCompanyUrlLine(line.raw, company)) continue
-      companyUrl = line.raw.match(URL_RE)?.[0] ?? ''
-      break
-    }
-
-    // Step 5: parse body — explicit "Роль:" wins, then compact title-like lines.
-    let position = ''
-    let positionIdx = -1
-    for (let i = 0; i < normalizedLines.length; i++) {
-      const roleTitle = extractRoleTitle(normalizedLines[i].clean)
-      if (roleTitle) {
-        position = roleTitle
-        positionIdx = i
+      let companyUrl = ''
+      for (const line of normalizedLines) {
+        if (!looksLikeCompanyUrlLine(line.raw, company)) continue
+        companyUrl = line.raw.match(URL_RE)?.[0] ?? ''
         break
       }
-    }
 
-    for (let i = 0; !position && i < Math.min(normalizedLines.length, 15); i++) {
-      if (!normalizedLines[i].wasBullet && looksLikeRoleTitle(normalizedLines[i].clean)) {
-        position = normalizedLines[i].clean
-        positionIdx = i
-        break
+      // Step 5: parse body — explicit "Роль:" wins, then compact title-like lines.
+      let position = ''
+      let positionIdx = -1
+      for (let i = 0; i < normalizedLines.length; i++) {
+        const roleTitle = extractRoleTitle(normalizedLines[i].clean)
+        if (roleTitle) {
+          position = roleTitle
+          positionIdx = i
+          break
+        }
       }
-    }
 
-    const skills = normalizedLines
-      .filter((l) => /^(?:стек|stack):/i.test(l.clean))
-      .flatMap((l) => splitTagList(l.clean.replace(/^(?:стек|stack):/i, '')))
+      for (let i = 0; !position && i < Math.min(normalizedLines.length, 15); i++) {
+        if (!normalizedLines[i].wasBullet && looksLikeRoleTitle(normalizedLines[i].clean)) {
+          position = normalizedLines[i].clean
+          positionIdx = i
+          break
+        }
+      }
 
-    const descriptionLines = normalizedLines
-      .filter((_, i) => i !== positionIdx)
-      .filter((l) => !/^(?:стек|stack):/i.test(l.clean))
-      .filter((l) => l.clean !== location)
-      .filter((l) => normalizeCompanyName(stripExperienceDurationSuffix(l.clean)) !== company)
-      .filter((l) => !(companyUrl && l.raw.includes(companyUrl) && looksLikeCompanyUrlLine(l.raw, company)))
-      .map((l) => l.raw)
-      .filter(Boolean)
+      const skills = normalizedLines
+        .filter((l) => /^(?:стек|stack):/i.test(l.clean))
+        .flatMap((l) => splitTagList(l.clean.replace(/^(?:стек|stack):/i, '')))
 
-    return {
-      id: crypto.randomUUID(),
-      company,
-      companyUrl,
-      position,
-      location,
-      fromMonth: from,
-      toMonth: to,
-      isCurrent,
-      description: descriptionLines.join('\n').trim(),
-      skills,
-    }
-  }).filter((exp) => exp.company || exp.position || exp.description || exp.skills.length)
+      const descriptionLines = normalizedLines
+        .filter((_, i) => i !== positionIdx)
+        .filter((l) => !/^(?:стек|stack):/i.test(l.clean))
+        .filter((l) => l.clean !== location)
+        .filter((l) => normalizeCompanyName(stripExperienceDurationSuffix(l.clean)) !== company)
+        .filter(
+          (l) =>
+            !(companyUrl && l.raw.includes(companyUrl) && looksLikeCompanyUrlLine(l.raw, company)),
+        )
+        .map((l) => l.raw)
+        .filter(Boolean)
+
+      return {
+        id: crypto.randomUUID(),
+        company,
+        companyUrl,
+        position,
+        location,
+        fromMonth: from,
+        toMonth: to,
+        isCurrent,
+        description: descriptionLines.join('\n').trim(),
+        skills,
+      }
+    })
+    .filter((exp) => exp.company || exp.position || exp.description || exp.skills.length)
 }
 
 function parseExperienceBlockEnCv(lines: string[]): WorkExperience[] {
-  const normalizedLines = lines
-    .map((line) => preserveStructuredLine(line))
-    .filter(Boolean)
+  const normalizedLines = lines.map((line) => preserveStructuredLine(line)).filter(Boolean)
 
   const entries: string[][] = []
   let current: string[] = []
@@ -1586,81 +1848,93 @@ function parseExperienceBlockEnCv(lines: string[]): WorkExperience[] {
 
   if (current.length) entries.push(current)
 
-  return entries.map((entryLines) => {
-    const companyLine = entryLines[0] ?? ''
-    const dateLine = entryLines.find((line, index) => index > 0 && (DATE_RE.test(line) || CURRENT_MARKER_RE.test(line))) ?? ''
-    const { from, to, isCurrent } = extractDates(dateLine)
-    const company = normalizeCompanyName(stripExperienceDurationSuffix(cleanLine(companyLine)))
+  return entries
+    .map((entryLines) => {
+      const companyLine = entryLines[0] ?? ''
+      const dateLine =
+        entryLines.find(
+          (line, index) => index > 0 && (DATE_RE.test(line) || CURRENT_MARKER_RE.test(line)),
+        ) ?? ''
+      const { from, to, isCurrent } = extractDates(dateLine)
+      const company = normalizeCompanyName(stripExperienceDurationSuffix(cleanLine(companyLine)))
 
-    const skills = entryLines
-      .filter((line) => /^(?:stack|стек)\s*:/i.test(line))
-      .flatMap((line) => splitTagList(line.replace(/^(?:stack|стек)\s*:/i, '')))
-      .map((skill) => normalizeSkillName(skill, 'en_cv'))
-      .filter(Boolean)
+      const skills = entryLines
+        .filter((line) => /^(?:stack|стек)\s*:/i.test(line))
+        .flatMap((line) => splitTagList(line.replace(/^(?:stack|стек)\s*:/i, '')))
+        .map((skill) => normalizeSkillName(skill, 'en_cv'))
+        .filter(Boolean)
 
-    const description = entryLines
-      .filter((line) => line !== companyLine && line !== dateLine)
-      .filter((line) => !/^(?:stack|стек)\s*:/i.test(line))
-      .map((line) => preserveStructuredLine(line))
-      .filter(Boolean)
-      .join('\n')
-      .trim()
+      const description = entryLines
+        .filter((line) => line !== companyLine && line !== dateLine)
+        .filter((line) => !/^(?:stack|стек)\s*:/i.test(line))
+        .map((line) => preserveStructuredLine(line))
+        .filter(Boolean)
+        .join('\n')
+        .trim()
 
-    return {
-      id: crypto.randomUUID(),
-      company,
-      companyUrl: '',
-      position: '',
-      location: '',
-      fromMonth: from,
-      toMonth: to,
-      isCurrent,
-      description,
-      skills,
-    }
-  }).filter((entry) => entry.company || entry.description || entry.skills.length)
+      return {
+        id: crypto.randomUUID(),
+        company,
+        companyUrl: '',
+        position: '',
+        location: '',
+        fromMonth: from,
+        toMonth: to,
+        isCurrent,
+        description,
+        skills,
+      }
+    })
+    .filter((entry) => entry.company || entry.description || entry.skills.length)
 }
 
 function parseEducationBlock(lines: string[]): Education[] {
-  return splitEntries(lines).map((entryLines) => {
-    const dateLineIndex = entryLines.findIndex((line) => DATE_RE.test(line) || CURRENT_MARKER_RE.test(line))
-    const dateLine = dateLineIndex >= 0 ? entryLines[dateLineIndex] : entryLines[0]
-    const [headerLine, ...restLines] = entryLines
-    const { from, to, isCurrent } = extractDates(dateLine)
-    const institutionParts = [cleanLine(
-      (dateLineIndex > 0 ? entryLines[0] : headerLine)
-        .replace(new RegExp(MONTH_YEAR_RE.source, 'gi'), '')
-        .replace(/[-–—|]+/g, ' ')
-    )]
-    const programParts: string[] = []
+  return splitEntries(lines)
+    .map((entryLines) => {
+      const dateLineIndex = entryLines.findIndex(
+        (line) => DATE_RE.test(line) || CURRENT_MARKER_RE.test(line),
+      )
+      const dateLine = dateLineIndex >= 0 ? entryLines[dateLineIndex] : entryLines[0]
+      const [headerLine, ...restLines] = entryLines
+      const { from, to, isCurrent } = extractDates(dateLine)
+      const institutionParts = [
+        cleanLine(
+          (dateLineIndex > 0 ? entryLines[0] : headerLine)
+            .replace(new RegExp(MONTH_YEAR_RE.source, 'gi'), '')
+            .replace(/[-–—|]+/g, ' '),
+        ),
+      ]
+      const programParts: string[] = []
 
-    const bodyLines = dateLineIndex > 0
-      ? entryLines.filter((_, index) => index !== 0 && index !== dateLineIndex)
-      : restLines
+      const bodyLines =
+        dateLineIndex > 0
+          ? entryLines.filter((_, index) => index !== 0 && index !== dateLineIndex)
+          : restLines
 
-    for (const line of bodyLines.map((value) => cleanLine(value)).filter(Boolean)) {
-      if (!programParts.length && !looksLikeEducationProgram(line)) {
-        institutionParts.push(line)
-        continue
+      for (const line of bodyLines.map((value) => cleanLine(value)).filter(Boolean)) {
+        if (!programParts.length && !looksLikeEducationProgram(line)) {
+          institutionParts.push(line)
+          continue
+        }
+
+        programParts.push(line)
       }
 
-      programParts.push(line)
-    }
+      const institution = institutionParts.join(' ').trim()
+      const programText = programParts.join(' ').trim()
+      const { degree, field } = splitEducationProgram(programText)
 
-    const institution = institutionParts.join(' ').trim()
-    const programText = programParts.join(' ').trim()
-    const { degree, field } = splitEducationProgram(programText)
-
-    return {
-      id: crypto.randomUUID(),
-      institution,
-      degree,
-      field,
-      fromMonth: from,
-      toMonth: to,
-      isCurrent,
-    }
-  }).filter((edu) => edu.institution || edu.degree || edu.field)
+      return {
+        id: crypto.randomUUID(),
+        institution,
+        degree,
+        field,
+        fromMonth: from,
+        toMonth: to,
+        isCurrent,
+      }
+    })
+    .filter((edu) => edu.institution || edu.degree || edu.field)
 }
 
 function parseSkillsBlock(lines: string[], profile: ParserProfile): Skill[] {
@@ -1668,14 +1942,16 @@ function parseSkillsBlock(lines: string[], profile: ParserProfile): Skill[] {
   const results: Skill[] = []
 
   const parts = lines
-    .flatMap((line) => line
-      .split(/\n|[,;|•·]+/g)
-      .map((part) => part.replace(/^[-–—*]\s*/, '').trim())
+    .flatMap((line) =>
+      line.split(/\n|[,;|•·]+/g).map((part) => part.replace(/^[-–—*]\s*/, '').trim()),
     )
     .flatMap((part) => {
       const colonIndex = part.indexOf(':')
       if (colonIndex > 0 && colonIndex < 30) {
-        return part.slice(colonIndex + 1).split(/[,;|]+/g).map((token) => token.trim())
+        return part
+          .slice(colonIndex + 1)
+          .split(/[,;|]+/g)
+          .map((token) => token.trim())
       }
       return [part]
     })
@@ -1688,7 +1964,12 @@ function parseSkillsBlock(lines: string[], profile: ParserProfile): Skill[] {
     // Skip sentence-like fragments that sneak in from description
     if (/\s/.test(part) && part.split(/\s+/).length > 4) continue
     if (/[.!?]$/.test(part)) continue
-    if (/\b(снизила|улучшил|провела|реализовала|внедрила|разработала|настроила|сократился|повысил|запустил)\b/i.test(part)) continue
+    if (
+      /\b(снизила|улучшил|провела|реализовала|внедрила|разработала|настроила|сократился|повысил|запустил)\b/i.test(
+        part,
+      )
+    )
+      continue
 
     const key = part.toLowerCase()
     if (seen.has(key)) continue
@@ -1706,29 +1987,31 @@ function parseSkillsBlock(lines: string[], profile: ParserProfile): Skill[] {
 function parseProjectsBlock(lines: string[]): Project[] {
   const entries = splitLooseEntries(lines)
 
-  return entries.map((entryLines) => {
-    const cleaned = entryLines.map((line) => cleanLine(line)).filter(Boolean)
-    const [titleLine = '', ...restLines] = cleaned
-    const link = firstUrl(entryLines)
-    const title = cleanProjectTitle(titleLine)
-    let subtitle = ''
-    let descriptionLines = restLines
+  return entries
+    .map((entryLines) => {
+      const cleaned = entryLines.map((line) => cleanLine(line)).filter(Boolean)
+      const [titleLine = '', ...restLines] = cleaned
+      const link = firstUrl(entryLines)
+      const title = cleanProjectTitle(titleLine)
+      let subtitle = ''
+      let descriptionLines = restLines
 
-    if (restLines[0] && restLines[0].length <= 80 && !/[.!?]$/.test(restLines[0])) {
-      subtitle = restLines[0]
-      descriptionLines = restLines.slice(1)
-    }
+      if (restLines[0] && restLines[0].length <= 80 && !/[.!?]$/.test(restLines[0])) {
+        subtitle = restLines[0]
+        descriptionLines = restLines.slice(1)
+      }
 
-    return {
-      id: crypto.randomUUID(),
-      kind: 'project' as const,
-      title,
-      subtitle,
-      issuedAt: '',
-      link,
-      description: descriptionLines.join('\n').trim(),
-    }
-  }).filter((entry) => entry.title || entry.subtitle || entry.description || entry.link)
+      return {
+        id: crypto.randomUUID(),
+        kind: 'project' as const,
+        title,
+        subtitle,
+        issuedAt: '',
+        link,
+        description: descriptionLines.join('\n').trim(),
+      }
+    })
+    .filter((entry) => entry.title || entry.subtitle || entry.description || entry.link)
 }
 
 function parseLanguagesBlock(lines: string[]): Language[] {
@@ -1768,11 +2051,15 @@ function splitLooseEntries(lines: string[]): string[][] {
 
   for (const line of lines) {
     const cleaned = cleanLine(line)
-    const startsNew = current.length > 0 && (
-      PROJECT_KEYWORD_RE.test(cleaned) ||
-      (cleaned.length <= 90 && !/[.!?]$/.test(cleaned) && !/^[•\-–—]/.test(cleaned) && /[A-ZА-ЯЁ]/.test(cleaned[0] ?? '')) ||
-      ((DATE_RE.test(cleaned) || CURRENT_MARKER_RE.test(cleaned)) && current.some((value) => cleanLine(value)))
-    )
+    const startsNew =
+      current.length > 0 &&
+      (PROJECT_KEYWORD_RE.test(cleaned) ||
+        (cleaned.length <= 90 &&
+          !/[.!?]$/.test(cleaned) &&
+          !/^[•\-–—]/.test(cleaned) &&
+          /[A-ZА-ЯЁ]/.test(cleaned[0] ?? '')) ||
+        ((DATE_RE.test(cleaned) || CURRENT_MARKER_RE.test(cleaned)) &&
+          current.some((value) => cleanLine(value))))
 
     if (startsNew) {
       entries.push(current)
@@ -1792,7 +2079,10 @@ function splitLooseEntries(lines: string[]): string[][] {
 
 function cleanProjectTitle(value: string): string {
   return cleanLine(value)
-    .replace(/\b(certification|certificate|project|projects|сертификат|сертификация|проект)\b[:\s-]*/i, '')
+    .replace(
+      /\b(certification|certificate|project|projects|сертификат|сертификация|проект)\b[:\s-]*/i,
+      '',
+    )
     .trim()
 }
 
@@ -1828,16 +2118,18 @@ function scoreWorkEntries(entries: WorkExperience[], rawLines: string[]): number
   if (!rawLines.length && !entries.length) return 0
   if (!entries.length) return 0.2
 
-  const completeness = average(entries.map((entry) => {
-    let score = 0
-    if (entry.company.trim()) score += 0.35
-    if (entry.position.trim()) score += 0.25
-    if (entry.location.trim()) score += 0.1
-    if (entry.fromMonth.trim() || entry.toMonth.trim() || entry.isCurrent) score += 0.25
-    if (entry.description.trim()) score += 0.15
-    if (entry.skills.length) score += 0.1
-    return score
-  }))
+  const completeness = average(
+    entries.map((entry) => {
+      let score = 0
+      if (entry.company.trim()) score += 0.35
+      if (entry.position.trim()) score += 0.25
+      if (entry.location.trim()) score += 0.1
+      if (entry.fromMonth.trim() || entry.toMonth.trim() || entry.isCurrent) score += 0.25
+      if (entry.description.trim()) score += 0.15
+      if (entry.skills.length) score += 0.1
+      return score
+    }),
+  )
 
   return clamp01(0.2 + Math.min(0.35, entries.length * 0.15) + completeness * 0.45)
 }
@@ -1846,13 +2138,15 @@ function scoreEducationEntries(entries: Education[], rawLines: string[]): number
   if (!rawLines.length && !entries.length) return 0
   if (!entries.length) return 0.2
 
-  const completeness = average(entries.map((entry) => {
-    let score = 0
-    if (entry.institution.trim()) score += 0.4
-    if (entry.degree.trim() || entry.field.trim()) score += 0.3
-    if (entry.fromMonth.trim() || entry.toMonth.trim() || entry.isCurrent) score += 0.3
-    return score
-  }))
+  const completeness = average(
+    entries.map((entry) => {
+      let score = 0
+      if (entry.institution.trim()) score += 0.4
+      if (entry.degree.trim() || entry.field.trim()) score += 0.3
+      if (entry.fromMonth.trim() || entry.toMonth.trim() || entry.isCurrent) score += 0.3
+      return score
+    }),
+  )
 
   return clamp01(0.2 + Math.min(0.3, entries.length * 0.18) + completeness * 0.5)
 }
@@ -1871,12 +2165,14 @@ function scoreLanguages(entries: Language[], rawLines: string[]): number {
   if (!rawLines.length && !entries.length) return 0
   if (!entries.length) return 0.2
 
-  const completeness = average(entries.map((entry) => {
-    let score = 0
-    if (entry.name.trim()) score += 0.6
-    if (entry.proficiency.trim()) score += 0.4
-    return score
-  }))
+  const completeness = average(
+    entries.map((entry) => {
+      let score = 0
+      if (entry.name.trim()) score += 0.6
+      if (entry.proficiency.trim()) score += 0.4
+      return score
+    }),
+  )
 
   return clamp01(0.2 + Math.min(0.3, entries.length * 0.18) + completeness * 0.5)
 }
@@ -1885,14 +2181,16 @@ function scoreProjects(entries: Project[], rawLines: string[]): number {
   if (!rawLines.length && !entries.length) return 0
   if (!entries.length) return 0.2
 
-  const completeness = average(entries.map((entry) => {
-    let score = 0
-    if (entry.title.trim()) score += 0.4
-    if (entry.subtitle.trim()) score += 0.15
-    if (entry.link.trim()) score += 0.15
-    if (entry.description.trim()) score += 0.3
-    return score
-  }))
+  const completeness = average(
+    entries.map((entry) => {
+      let score = 0
+      if (entry.title.trim()) score += 0.4
+      if (entry.subtitle.trim()) score += 0.15
+      if (entry.link.trim()) score += 0.15
+      if (entry.description.trim()) score += 0.3
+      return score
+    }),
+  )
 
   return clamp01(0.2 + Math.min(0.25, entries.length * 0.16) + completeness * 0.55)
 }
@@ -1911,8 +2209,10 @@ function roundScore(value: number): number {
 }
 
 function looksLikeEducationProgram(line: string): boolean {
-  return /(bachelor|master|phd|doctorate|associate|бакалавр|магистр|аспирант|специалист)/i.test(line)
-    || (line.includes(',') && line.length > 40)
+  return (
+    /(bachelor|master|phd|doctorate|associate|бакалавр|магистр|аспирант|специалист)/i.test(line) ||
+    (line.includes(',') && line.length > 40)
+  )
 }
 
 function splitEducationProgram(programText: string): { degree: string; field: string } {
@@ -1920,15 +2220,23 @@ function splitEducationProgram(programText: string): { degree: string; field: st
     return { degree: '', field: '' }
   }
 
-  const degreeMatch = programText.match(/(bachelor|master|phd|doctorate|associate|бакалавр|магистр|аспирант|специалист)/i)
+  const degreeMatch = programText.match(
+    /(bachelor|master|phd|doctorate|associate|бакалавр|магистр|аспирант|специалист)/i,
+  )
   if (degreeMatch) {
     return {
       degree: degreeMatch[0],
-      field: programText.replace(degreeMatch[0], '').replace(/^[-–—,\s]+/, '').trim(),
+      field: programText
+        .replace(degreeMatch[0], '')
+        .replace(/^[-–—,\s]+/, '')
+        .trim(),
     }
   }
 
-  const parts = programText.split(',').map((part) => part.trim()).filter(Boolean)
+  const parts = programText
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
   if (parts.length >= 2) {
     return {
       degree: parts[0],

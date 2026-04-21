@@ -3,8 +3,12 @@
     <div class="section__header">
       <h2 class="section__title">{{ t('form.projects') }}</h2>
       <div class="section__actions">
-        <AppButton variant="ghost" size="sm" @click="addProject">{{ t('form.addProject') }}</AppButton>
-        <AppButton variant="secondary" size="sm" @click="addCertification">{{ t('form.addCertification') }}</AppButton>
+        <AppButton variant="ghost" size="sm" @click="addProject">{{
+          t('form.addProject')
+        }}</AppButton>
+        <AppButton variant="secondary" size="sm" @click="addCertification">{{
+          t('form.addCertification')
+        }}</AppButton>
       </div>
     </div>
 
@@ -14,12 +18,26 @@
         <article v-for="project in projectEntries" :key="project.id" class="block">
           <div class="block__header">
             <strong class="block__title">{{ project.title || t('form.projectEntry') }}</strong>
-            <AppButton variant="ghost" size="sm" @click="removeProject(project.id)">{{ t('common.remove') }}</AppButton>
+            <AppButton variant="ghost" size="sm" @click="removeProject(project.id)">{{
+              t('common.remove')
+            }}</AppButton>
           </div>
 
-          <AppInput v-model="project.title" :label="t('form.projectTitle')" :placeholder="t('form.projectTitlePlaceholder')" />
-          <AppInput v-model="project.subtitle" :label="t('form.projectRole')" :placeholder="t('form.projectRolePlaceholder')" />
-          <AppInput v-model="project.link" :label="t('form.projectLink')" :placeholder="t('form.projectLinkPlaceholder')" />
+          <AppInput
+            v-model="project.title"
+            :label="t('form.projectTitle')"
+            :placeholder="t('form.projectTitlePlaceholder')"
+          />
+          <AppInput
+            v-model="project.subtitle"
+            :label="t('form.projectRole')"
+            :placeholder="t('form.projectRolePlaceholder')"
+          />
+          <AppInput
+            v-model="project.link"
+            :label="t('form.projectLink')"
+            :placeholder="t('form.projectLinkPlaceholder')"
+          />
           <AppTextarea
             v-model="project.description"
             :label="t('form.description')"
@@ -36,10 +54,16 @@
         <article v-for="cert in certificationEntries" :key="cert.id" class="block block--compact">
           <div class="block__header">
             <strong class="block__title">{{ cert.title || t('form.certificationEntry') }}</strong>
-            <AppButton variant="ghost" size="sm" @click="removeProject(cert.id)">{{ t('common.remove') }}</AppButton>
+            <AppButton variant="ghost" size="sm" @click="removeProject(cert.id)">{{
+              t('common.remove')
+            }}</AppButton>
           </div>
 
-          <AppInput v-model="cert.title" :label="t('form.projectTitle')" :placeholder="t('form.projectTitlePlaceholder')" />
+          <AppInput
+            v-model="cert.title"
+            :label="t('form.projectTitle')"
+            :placeholder="t('form.projectTitlePlaceholder')"
+          />
 
           <div class="grid-2">
             <AppInput
@@ -54,7 +78,11 @@
             />
           </div>
 
-          <AppInput v-model="cert.link" :label="t('form.projectLink')" :placeholder="t('form.projectLinkPlaceholder')" />
+          <AppInput
+            v-model="cert.link"
+            :label="t('form.projectLink')"
+            :placeholder="t('form.projectLinkPlaceholder')"
+          />
           <AppTextarea
             v-model="cert.description"
             :label="t('form.description')"
@@ -84,8 +112,12 @@ const { data } = storeToRefs(store)
 const { addProject, addCertification, removeProject } = store
 const monthPlaceholder = computed(() => t('common.monthPlaceholder'))
 
-const projectEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'project'))
-const certificationEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'certification'))
+const projectEntries = computed(() =>
+  data.value.projects.filter((entry) => entry.kind === 'project'),
+)
+const certificationEntries = computed(() =>
+  data.value.projects.filter((entry) => entry.kind === 'certification'),
+)
 </script>
 
 <style scoped lang="scss">

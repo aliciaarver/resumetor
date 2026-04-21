@@ -45,10 +45,10 @@ export function buildPersonalMetrics(
   const score = Math.min(
     1,
     (value.fullName.trim() ? 0.45 : 0) +
-    (value.position.trim() ? 0.15 : 0) +
-    (value.location.trim() ? 0.1 : 0) +
-    (value.phone.trim() ? 0.2 : 0) +
-    Math.min(0.25, (value.links?.filter((link) => link.url.trim()).length ?? 0) * 0.12)
+      (value.position.trim() ? 0.15 : 0) +
+      (value.location.trim() ? 0.1 : 0) +
+      (value.phone.trim() ? 0.2 : 0) +
+      Math.min(0.25, (value.links?.filter((link) => link.url.trim()).length ?? 0) * 0.12),
   )
 
   return {

@@ -40,40 +40,46 @@ export function normalizeResumeData(value: LegacyResumeData): ResumeData {
     ? personal.links.map((link) => normalizeSocialLink(link))
     : []
   const workFormats = Array.isArray(personal.workFormats)
-    ? personal.workFormats.filter((entry): entry is string => typeof entry === 'string').map((entry) => entry.trim()).filter(Boolean)
+    ? personal.workFormats
+        .filter((entry): entry is string => typeof entry === 'string')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
     : []
   const workExperience = Array.isArray(value.workExperience)
     ? value.workExperience.map((entry) => ({
-      id: entry?.id || crypto.randomUUID(),
-      company: typeof entry?.company === 'string' ? entry.company : '',
-      companyUrl: typeof entry?.companyUrl === 'string' ? entry.companyUrl : '',
-      position: typeof entry?.position === 'string' ? entry.position : '',
-      location: typeof entry?.location === 'string' ? entry.location : '',
-      fromMonth: typeof entry?.fromMonth === 'string' ? entry.fromMonth : '',
-      toMonth: typeof entry?.toMonth === 'string' ? entry.toMonth : '',
-      isCurrent: Boolean(entry?.isCurrent),
-      description: typeof entry?.description === 'string' ? entry.description : '',
-      skills: Array.isArray(entry?.skills)
-        ? entry.skills.filter((skill): skill is string => typeof skill === 'string').map((skill) => skill.trim()).filter(Boolean)
-        : [],
-    }))
+        id: entry?.id || crypto.randomUUID(),
+        company: typeof entry?.company === 'string' ? entry.company : '',
+        companyUrl: typeof entry?.companyUrl === 'string' ? entry.companyUrl : '',
+        position: typeof entry?.position === 'string' ? entry.position : '',
+        location: typeof entry?.location === 'string' ? entry.location : '',
+        fromMonth: typeof entry?.fromMonth === 'string' ? entry.fromMonth : '',
+        toMonth: typeof entry?.toMonth === 'string' ? entry.toMonth : '',
+        isCurrent: Boolean(entry?.isCurrent),
+        description: typeof entry?.description === 'string' ? entry.description : '',
+        skills: Array.isArray(entry?.skills)
+          ? entry.skills
+              .filter((skill): skill is string => typeof skill === 'string')
+              .map((skill) => skill.trim())
+              .filter(Boolean)
+          : [],
+      }))
     : []
   const skills = Array.isArray(value.skills)
     ? value.skills.map((skill) => ({
-      id: skill?.id || crypto.randomUUID(),
-      name: typeof skill?.name === 'string' ? skill.name : '',
-    }))
+        id: skill?.id || crypto.randomUUID(),
+        name: typeof skill?.name === 'string' ? skill.name : '',
+      }))
     : []
   const projects = Array.isArray(value.projects)
     ? value.projects.map((project) => ({
-      id: project?.id || crypto.randomUUID(),
-      kind: project?.kind === 'certification' ? 'certification' as const : 'project' as const,
-      title: typeof project?.title === 'string' ? project.title : '',
-      subtitle: typeof project?.subtitle === 'string' ? project.subtitle : '',
-      issuedAt: typeof project?.issuedAt === 'string' ? project.issuedAt : '',
-      link: typeof project?.link === 'string' ? project.link : '',
-      description: typeof project?.description === 'string' ? project.description : '',
-    }))
+        id: project?.id || crypto.randomUUID(),
+        kind: project?.kind === 'certification' ? ('certification' as const) : ('project' as const),
+        title: typeof project?.title === 'string' ? project.title : '',
+        subtitle: typeof project?.subtitle === 'string' ? project.subtitle : '',
+        issuedAt: typeof project?.issuedAt === 'string' ? project.issuedAt : '',
+        link: typeof project?.link === 'string' ? project.link : '',
+        description: typeof project?.description === 'string' ? project.description : '',
+      }))
     : []
 
   if (legacyEmail && !links.some((link) => link.label === 'Email' && link.url === legacyEmail)) {

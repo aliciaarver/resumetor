@@ -9,15 +9,12 @@ export function createEmptyPdfMeta(): PdfMetadata {
   }
 }
 
-export function buildSuggestedPdfMeta(
-  resume: ResumeData,
-  defaultTitleSuffix: string,
-): PdfMetadata {
-  const fullName = [
-    resume.personal.lastName,
-    resume.personal.firstName,
-    resume.personal.middleName,
-  ].map((part) => part.trim()).filter(Boolean).join(' ') || resume.personal.fullName.trim()
+export function buildSuggestedPdfMeta(resume: ResumeData, defaultTitleSuffix: string): PdfMetadata {
+  const fullName =
+    [resume.personal.lastName, resume.personal.firstName, resume.personal.middleName]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(' ') || resume.personal.fullName.trim()
   const title = fullName ? `${fullName} — ${defaultTitleSuffix}` : ''
   const author = fullName
   const subject = resume.aboutMe.trim()

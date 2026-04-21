@@ -23,36 +23,53 @@ export const usePdfMetaStore = defineStore('pdfMeta', () => {
         locale: localeStore.locale,
         fullName: resumeStore.data.personal.fullName,
         aboutMe: resumeStore.data.aboutMe,
-        positions: resumeStore.data.workExperience.map((entry) => `${entry.position}|${entry.company}`).join('::'),
-        education: resumeStore.data.education.map((entry) => `${entry.degree}|${entry.field}`).join('::'),
+        positions: resumeStore.data.workExperience
+          .map((entry) => `${entry.position}|${entry.company}`)
+          .join('::'),
+        education: resumeStore.data.education
+          .map((entry) => `${entry.degree}|${entry.field}`)
+          .join('::'),
         skills: resumeStore.data.skills.map((entry) => entry.name).join('::'),
         languages: resumeStore.data.languages.map((entry) => entry.name).join('::'),
-        projects: resumeStore.data.projects.map((entry) => `${entry.title}|${entry.subtitle}`).join('::'),
+        projects: resumeStore.data.projects
+          .map((entry) => `${entry.title}|${entry.subtitle}`)
+          .join('::'),
       }),
       () => {
         const suggested = buildSuggestedPdfMeta(resumeStore.data, t('pdf.defaultTitleSuffix'))
 
         meta.value = {
-          title: shouldSyncField(meta.value.title, autoMeta.value.title) ? suggested.title : meta.value.title,
-          author: shouldSyncField(meta.value.author, autoMeta.value.author) ? suggested.author : meta.value.author,
-          subject: shouldSyncField(meta.value.subject, autoMeta.value.subject) ? suggested.subject : meta.value.subject,
-          keywords: shouldSyncField(meta.value.keywords, autoMeta.value.keywords) ? suggested.keywords : meta.value.keywords,
+          title: shouldSyncField(meta.value.title, autoMeta.value.title)
+            ? suggested.title
+            : meta.value.title,
+          author: shouldSyncField(meta.value.author, autoMeta.value.author)
+            ? suggested.author
+            : meta.value.author,
+          subject: shouldSyncField(meta.value.subject, autoMeta.value.subject)
+            ? suggested.subject
+            : meta.value.subject,
+          keywords: shouldSyncField(meta.value.keywords, autoMeta.value.keywords)
+            ? suggested.keywords
+            : meta.value.keywords,
         }
         autoMeta.value = suggested
       },
-      { immediate: true }
+      { immediate: true },
     )
   }
 
   function hydrateFromParsed(parsedMeta: Partial<PdfMetadata>) {
     const resumeStore = useResumeStore()
     const localeStore = useLocaleStore()
-    const suggested = buildSuggestedPdfMeta(resumeStore.data, localeStore.t('pdf.defaultTitleSuffix'))
+    const suggested = buildSuggestedPdfMeta(
+      resumeStore.data,
+      localeStore.t('pdf.defaultTitleSuffix'),
+    )
 
     meta.value = {
       ...suggested,
       ...Object.fromEntries(
-        Object.entries(parsedMeta).filter(([, value]) => Boolean(value?.trim()))
+        Object.entries(parsedMeta).filter(([, value]) => Boolean(value?.trim())),
       ),
     }
     autoMeta.value = suggested
@@ -61,7 +78,10 @@ export const usePdfMetaStore = defineStore('pdfMeta', () => {
   function resetMeta() {
     const resumeStore = useResumeStore()
     const localeStore = useLocaleStore()
-    const suggested = buildSuggestedPdfMeta(resumeStore.data, localeStore.t('pdf.defaultTitleSuffix'))
+    const suggested = buildSuggestedPdfMeta(
+      resumeStore.data,
+      localeStore.t('pdf.defaultTitleSuffix'),
+    )
     meta.value = suggested
     autoMeta.value = suggested
   }

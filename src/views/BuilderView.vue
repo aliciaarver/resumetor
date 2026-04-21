@@ -10,7 +10,9 @@
         :aria-selected="activeTab === 'edit' ? 'true' : 'false'"
         aria-controls="builder-panel-edit"
         @click="activeTab = 'edit'"
-      >{{ t('builder.editTab') }}</button>
+      >
+        {{ t('builder.editTab') }}
+      </button>
       <button
         class="tab-bar__btn"
         type="button"
@@ -20,7 +22,9 @@
         :aria-selected="activeTab === 'preview' ? 'true' : 'false'"
         aria-controls="builder-panel-preview"
         @click="activeTab = 'preview'"
-      >{{ t('builder.previewTab') }}</button>
+      >
+        {{ t('builder.previewTab') }}
+      </button>
     </div>
 
     <aside
@@ -35,7 +39,11 @@
         <div class="form-header">
           <h1 class="form-header__logo">Resumetor</h1>
           <div class="form-header__actions">
-            <div class="locale-switch" :aria-label="t('locale.switchLabel')" :title="t('locale.switchLabel')">
+            <div
+              class="locale-switch"
+              :aria-label="t('locale.switchLabel')"
+              :title="t('locale.switchLabel')"
+            >
               <button
                 v-for="option in locales"
                 :key="option"
@@ -47,7 +55,9 @@
                 {{ option.toUpperCase() }}
               </button>
             </div>
-            <AppButton variant="ghost" size="sm" @click="confirmReset">{{ t('builder.reset') }}</AppButton>
+            <AppButton variant="ghost" size="sm" @click="confirmReset">{{
+              t('builder.reset')
+            }}</AppButton>
           </div>
         </div>
 
@@ -79,27 +89,57 @@
       :aria-hidden="activeTab !== 'preview' ? 'true' : 'false'"
       :class="{ 'builder__preview--visible': activeTab === 'preview' }"
     >
-        <div class="preview-wrap">
-          <div class="preview-actions">
+      <div class="preview-wrap">
+        <div class="preview-actions">
           <AppButton variant="primary" :loading="exporting" @click="handleExport">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 3v12M7 11l5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M12 3v12M7 11l5 5 5-5M4 21h16"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
             {{ t('builder.downloadPdf') }}
           </AppButton>
           <AppButton variant="secondary" @click="showPdfSettings = !showPdfSettings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14" stroke-linecap="round"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"
+                stroke-linecap="round"
+              />
             </svg>
             {{ t('builder.pdfSettings') }}
           </AppButton>
-          <p v-if="previewPerformanceNotice" class="preview-actions__note" role="status" aria-live="polite">
+          <p
+            v-if="previewPerformanceNotice"
+            class="preview-actions__note"
+            role="status"
+            aria-live="polite"
+          >
             {{ previewPerformanceNotice }}
           </p>
         </div>
 
-        <div class="preview-container" ref="previewContainerEl" :aria-label="t('builder.previewRegionLabel')">
+        <div
+          class="preview-container"
+          ref="previewContainerEl"
+          :aria-label="t('builder.previewRegionLabel')"
+        >
           <div class="preview-pages" :style="pageStyle">
             <div
               v-for="page in pageOffsets"
@@ -143,11 +183,7 @@ import { usePdfExport } from '@/composables/usePdfExport'
 import { useLocaleStore } from '@/stores/locale'
 import { useResumeStore } from '@/stores/resume'
 import { evaluatePreviewPerformance } from '@/utils/performanceBudget'
-import {
-  A4_PX_HEIGHT,
-  A4_PX_WIDTH,
-  measurePagedLayout,
-} from '@/utils/pagination'
+import { A4_PX_HEIGHT, A4_PX_WIDTH, measurePagedLayout } from '@/utils/pagination'
 import PdfMetadataPanel from '@/components/pdf/PdfMetadataPanel.vue'
 import ResumePreview from '@/components/preview/ResumePreview.vue'
 import ResumeUploader from '@/components/upload/ResumeUploader.vue'
@@ -188,14 +224,14 @@ watch(
     previewNaturalHeight.value = layout.height
     previewPageStarts.value = layout.pageStarts
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 const pageOffsets = computed(() =>
   previewPageStarts.value.map((naturalTop, index) => ({
     index,
     naturalTop,
-  }))
+  })),
 )
 
 const previewStageHeight = computed(() => {
@@ -331,9 +367,16 @@ function confirmReset() {
   gap: $sp-5;
   overscroll-behavior: contain;
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: $color-border; border-radius: 3px; }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $color-border;
+    border-radius: 3px;
+  }
 }
 
 .form-header {
@@ -367,7 +410,9 @@ function confirmReset() {
     font-size: 12px;
     font-weight: 700;
     color: $color-text-muted;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &--active {
       background: $color-surface;
@@ -453,9 +498,16 @@ function confirmReset() {
   min-height: 0;
   overscroll-behavior: contain;
 
-  &::-webkit-scrollbar { width: 8px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+  }
 }
 
 .preview-pages {

@@ -2,17 +2,42 @@ import { ref, type Ref } from 'vue'
 import type { PdfMetadata } from '@/types/resume'
 import { useLocaleStore } from '@/stores/locale'
 import { evaluateExportPerformance } from '@/utils/performanceBudget'
-import {
-  A4_MM_HEIGHT,
-  A4_MM_WIDTH,
-  measurePagedLayout,
-} from '@/utils/pagination'
+import { A4_MM_HEIGHT, A4_MM_WIDTH, measurePagedLayout } from '@/utils/pagination'
 
 const CYRILLIC_TO_LATIN: Record<string, string> = {
-  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z',
-  и: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
-  с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch',
-  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'g',
+  д: 'd',
+  е: 'e',
+  ё: 'e',
+  ж: 'zh',
+  з: 'z',
+  и: 'i',
+  й: 'i',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'h',
+  ц: 'ts',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'sch',
+  ъ: '',
+  ы: 'y',
+  ь: '',
+  э: 'e',
+  ю: 'yu',
+  я: 'ya',
 }
 
 export function usePdfExport(elementRef: Ref<HTMLElement | null>) {
@@ -104,7 +129,17 @@ export function usePdfExport(elementRef: Ref<HTMLElement | null>) {
           const sliceCtx = sliceCanvas.getContext('2d')!
           sliceCtx.fillStyle = '#ffffff'
           sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height)
-          sliceCtx.drawImage(canvas, 0, pageTop, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+          sliceCtx.drawImage(
+            canvas,
+            0,
+            pageTop,
+            canvas.width,
+            sliceHeight,
+            0,
+            0,
+            canvas.width,
+            sliceHeight,
+          )
 
           pdf.addImage(sliceCanvas, 'PNG', 0, 0, A4_MM_WIDTH, A4_MM_HEIGHT)
         })

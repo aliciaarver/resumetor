@@ -10,17 +10,22 @@
         <div v-for="lang in data.languages" :key="lang.id" class="lang-row">
           <AppInput v-model="lang.name" :placeholder="t('form.languagePlaceholder')" />
           <select v-model="lang.proficiency" class="select">
-            <option
-              v-for="option in proficiencyOptions"
-              :key="option.value"
-              :value="option.value"
-            >
+            <option v-for="option in proficiencyOptions" :key="option.value" :value="option.value">
               {{ option.label }}
             </option>
           </select>
-          <button class="lang-row__remove" @click="removeLanguage(lang.id)" :title="t('common.remove')">
+          <button
+            class="lang-row__remove"
+            @click="removeLanguage(lang.id)"
+            :title="t('common.remove')"
+          >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path
+                d="M1 1l12 12M13 1L1 13"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -82,7 +87,9 @@ const { addLanguage, removeLanguage } = store
     height: 28px;
     border-radius: $radius-sm;
     color: $color-text-muted;
-    transition: color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s;
 
     &:hover {
       color: $color-danger;
@@ -106,8 +113,15 @@ const { addLanguage, removeLanguage } = store
   border-radius: $radius-md;
 }
 
-.list-enter-active, .list-leave-active { transition: all 0.2s ease; }
-.list-enter-from, .list-leave-to { opacity: 0; transform: translateY(-6px); }
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.2s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 
 @media (max-width: 720px) {
   .lang-row {

@@ -25,22 +25,24 @@ export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
   )
 
   const rootRect = element.getBoundingClientRect()
-  const scaleX = rootRect.width > 0 && element.offsetWidth > 0
-    ? rootRect.width / element.offsetWidth
-    : 1
-  const scaleY = rootRect.height > 0 && element.offsetHeight > 0
-    ? rootRect.height / element.offsetHeight
-    : scaleX || 1
-  const blocks = Array.from(element.querySelectorAll<HTMLElement>('[data-page-block]')).map((block) => {
-    const rect = block.getBoundingClientRect()
+  const scaleX =
+    rootRect.width > 0 && element.offsetWidth > 0 ? rootRect.width / element.offsetWidth : 1
+  const scaleY =
+    rootRect.height > 0 && element.offsetHeight > 0
+      ? rootRect.height / element.offsetHeight
+      : scaleX || 1
+  const blocks = Array.from(element.querySelectorAll<HTMLElement>('[data-page-block]')).map(
+    (block) => {
+      const rect = block.getBoundingClientRect()
 
-    return {
-      top: (rect.top - rootRect.top) / scaleY,
-      bottom: (rect.bottom - rootRect.top) / scaleY,
-      height: rect.height / scaleY,
-      kind: block.dataset.pageBlockKind ?? 'item',
-    }
-  })
+      return {
+        top: (rect.top - rootRect.top) / scaleY,
+        bottom: (rect.bottom - rootRect.top) / scaleY,
+        height: rect.height / scaleY,
+        kind: block.dataset.pageBlockKind ?? 'item',
+      }
+    },
+  )
 
   if (!blocks.length) {
     return {
