@@ -1,5 +1,5 @@
 const { execSync, exec } = require('child_process');
-const { writeFileSync, readFileSync, existsSync } = require('fs');
+const { writeFileSync, readFileSync, existsSync, mkdirSync } = require('fs');
 const { tmpdir } = require('os');
 const path = require('path');
 
@@ -29,13 +29,27 @@ function shQuote(s) {
   return `'${String(s).replace(/'/g, `'\\''`)}'`;
 }
 
-function openTerminalWithScript(cmd) {
+function openTerminalWithScript(cmd, { autoCloseOnSuccess = false } = {}) {
   const scriptPath = path.join(tmpdir(), `ai-dashboard-${Date.now()}.sh`);
-  writeFileSync(scriptPath, `#!/bin/bash\n${cmd}\n`, { mode: 0o755 });
 
+  // На анализе пользователь не должен следить за десятью открытыми окнами:
+  // если команда завершилась успешно — закрываем окно Terminal через AppleScript,
+  // находя его по tty селект-таба. На ошибке окно остаётся, чтобы можно было разобраться.
+  // Heredoc без кавычек вокруг разделителя — bash подставит $TTY_DEV в AppleScript.
+  const closeBlock = autoCloseOnSuccess
+    ? `\nRC=$?\nTTY_DEV=$(tty)\nif [ $RC -eq 0 ]; then\n  /usr/bin/osascript <<APPLESCRIPT_EOF >/dev/null 2>&1\ntell application "Terminal"\n  repeat with w in windows\n    try\n      if tty of selected tab of w is "$TTY_DEV" then\n        close w saving no\n        exit repeat\n      end if\n    end try\n  end repeat\nend tell\nAPPLESCRIPT_EOF\nfi\nexit $RC\n`
+    : '\n';
+
+  writeFileSync(scriptPath, `#!/bin/bash\n${cmd}${closeBlock}`, { mode: 0o755 });
+
+  // Не вызываем activate — Terminal не выходит на передний план.
+  // Сразу свернули окно: оно есть в Dock на случай ошибки, но в глаза не лезет.
   const appleScript = `tell application "Terminal"
   do script "bash '${scriptPath}'"
-  activate
+  delay 0.05
+  try
+    set miniaturized of front window to true
+  end try
 end tell`;
 
   exec(`osascript << 'EOF'\n${appleScript}\nEOF`, (err) => {
@@ -74,8 +88,11 @@ function figmaCacheDir(projectPath) {
   return path.join(projectPath, CACHE_SUBDIR, 'figma');
 }
 
-function figmaCacheNote(projectPath) {
+function figmaCacheNote(projectPath, figmaUrl) {
   const dir = figmaCacheDir(projectPath);
+  if (figmaUrl) {
+    return `Изучи макет по ссылке: ${figmaUrl} (она задана разработчиком явно — это приоритетный источник, ссылки в задаче можно игнорировать). Извлеки fileKey из URL и проверь ${dir}/{fileKey}.md — если файл существует и младше 24 часов, используй его вместо повторного запроса к Figma API. Иначе — фетчни через Figma API (X-Figma-Token: $FIGMA_TOKEN) и сохрани разбор в ${dir}/{fileKey}.md (создай директорию если нужно).`;
+  }
   return `Если в задаче есть ссылка на Figma: извлеки fileKey из URL и проверь ${dir}/{fileKey}.md — если файл существует и младше 24 часов, используй его вместо повторного запроса к Figma API. Иначе — изучи макет через Figma API (X-Figma-Token: $FIGMA_TOKEN) и сохрани разбор в ${dir}/{fileKey}.md (создай директорию если нужно).`;
 }
 
@@ -86,98 +103,264 @@ function trackerReadNote(tracker, taskUrl) {
   return `Открой задачу по ссылке ${taskUrl} — это тикет YouTrack. Данные бери через YouTrack REST API (Authorization: Bearer $YOUTRACK_TOKEN, база $YOUTRACK_URL): GET /api/issues/{id}?fields=summary,description,comments(text,author(login),created). Trello API здесь не применим.`;
 }
 
-function completionNote(tracker, taskId, taskUrl) {
+function completionNote(tracker, taskId, taskUrl, { autoCommit, autoMoveTask }) {
   const notReadyGuard = `Если работа НЕ завершена (остались TODO, падают тесты, есть вопросы к пользователю) — НЕ коммить, НЕ пушь, НЕ переноси задачу. Просто сообщи что осталось.`;
-  const gitSteps = (idPlaceholder) => `a) Проверь статус: \`git status --porcelain\`. Если нет изменений — значит коммитить нечего, сообщи об этом и пропусти пуш.
-b) Добавь все изменения и сделай коммит по правилам commits.md: \`git add -A && git commit -m "<тип>(${idPlaceholder}): <краткое описание>"\`. Если задача требует несколько логически разных коммитов — делай их по очереди, каждый со своим сообщением. Никаких \`wip\`/\`fix\`/\`update\` — всегда осмысленное сообщение.
-c) Запушь: \`git push -u origin HEAD\` (работает и когда upstream уже настроен, и когда ветки ещё нет в origin).
-d) Если коммит или пуш упал — сообщи что именно сломалось (вывод git), карточку НЕ переноси.`;
 
-  if (tracker === 'trello') {
-    return `Работа реально завершена — делаешь коммит, пуш, и переносишь карточку в колонку «На тестировании».
+  // Полностью ручной режим — самый частый кейс на работе.
+  if (!autoCommit && !autoMoveTask) {
+    return `Работа сделана. **НЕ** делай \`git add\`/\`git commit\`/\`git push\` и **НЕ** переноси задачу в трекере — это сделает разработчик сам после ревью.
 
-Для коммита ID задачи — shortLink из URL карточки ${taskUrl}: кусок между \`/c/\` и следующим \`/\` (например, \`https://trello.com/c/abc123xy/...\` → \`abc123xy\`).
+В конце дай короткий отчёт:
+- Что было сделано (1-3 предложения).
+- Какие файлы изменены (полные пути от корня worktree).
+- Что разработчику стоит проверить перед коммитом (нюансы, побочные эффекты, что протестировать).
 
-${gitSteps('<shortLink>')}
-e) Получи колонки доски: \`curl -s "https://api.trello.com/1/boards/$TRELLO_BOARD_ID/lists?key=$TRELLO_KEY&token=$TRELLO_TOKEN"\`.
-f) Найди колонку с именем «На тестировании» (регистр не важен, но текст должен совпадать). Возьми её id.
-g) Перемести карточку: \`curl -s -X PUT "https://api.trello.com/1/cards/${taskId}?idList={testingListId}&key=$TRELLO_KEY&token=$TRELLO_TOKEN"\`.
-h) Если колонки «На тестировании» нет — сообщи об этом, карточку НЕ трогай.
+Изменения лежат в текущей рабочей копии (git worktree). Разработчик сам сделает \`git add\`/\`git commit\`/\`git push\` и сам перенесёт задачу в трекере.
 
 ${notReadyGuard}`;
   }
 
-  return `Работа реально завершена — делаешь коммит, пуш, и переводишь задачу в статус «На тестировании» в YouTrack.
+  const commitSteps = `Коммит и пуш:
+a) Проверь статус: \`git status --porcelain\`. Если нет изменений — значит коммитить нечего, сообщи об этом и пропусти пуш.
+b) Добавь все изменения и сделай коммит по правилам commits.md: \`git add -A && git commit -m "<тип>(${tracker === 'trello' ? '<shortLink>' : taskId}): <краткое описание>"\`. Если задача требует несколько логически разных коммитов — делай их по очереди, каждый со своим сообщением. Никаких \`wip\`/\`fix\`/\`update\` — всегда осмысленное сообщение.
+c) Запушь: \`git push -u origin HEAD\`.
+d) Если коммит или пуш упал — сообщи что именно сломалось (вывод git), задачу НЕ переноси.`;
 
-${gitSteps(taskId)}
-e) Получи список возможных значений State для этой задачи: \`curl -s -H "Authorization: Bearer $YOUTRACK_TOKEN" "$YOUTRACK_URL/api/issues/${taskId}?fields=customFields(name,value(name),projectCustomField(bundle(values(name))))"\`.
-f) Найди значение «На тестировании» (регистр не важен, но текст должен совпадать).
-g) Обнови State: \`curl -s -X POST -H "Authorization: Bearer $YOUTRACK_TOKEN" -H "Content-Type: application/json" "$YOUTRACK_URL/api/issues/${taskId}?fields=customFields(name,value(name))" -d '{"customFields":[{"name":"State","\\$type":"SingleEnumIssueCustomField","value":{"name":"На тестировании"}}]}'\`.
-h) Если значения «На тестировании» нет в списке — сообщи об этом, статус НЕ меняй.
+  const trelloMoveSteps = `Перенос карточки в «На тестировании»:
+- Получи колонки доски: \`curl -s "https://api.trello.com/1/boards/$TRELLO_BOARD_ID/lists?key=$TRELLO_KEY&token=$TRELLO_TOKEN"\`.
+- Найди колонку с именем «На тестировании» (регистр не важен, текст должен совпадать). Возьми её id.
+- Перемести карточку: \`curl -s -X PUT "https://api.trello.com/1/cards/${taskId}?idList={testingListId}&key=$TRELLO_KEY&token=$TRELLO_TOKEN"\`.
+- Если колонки «На тестировании» нет — сообщи, карточку НЕ трогай.`;
+
+  const ytMoveSteps = `Перевод задачи в статус «На тестировании»:
+- Получи список значений State: \`curl -s -H "Authorization: Bearer $YOUTRACK_TOKEN" "$YOUTRACK_URL/api/issues/${taskId}?fields=customFields(name,value(name),projectCustomField(bundle(values(name))))"\`.
+- Найди значение «На тестировании» (регистр не важен).
+- Обнови State: \`curl -s -X POST -H "Authorization: Bearer $YOUTRACK_TOKEN" -H "Content-Type: application/json" "$YOUTRACK_URL/api/issues/${taskId}?fields=customFields(name,value(name))" -d '{"customFields":[{"name":"State","\\$type":"SingleEnumIssueCustomField","value":{"name":"На тестировании"}}]}'\`.
+- Если значения «На тестировании» нет — сообщи, статус НЕ меняй.`;
+
+  const moveSteps = tracker === 'trello' ? trelloMoveSteps : ytMoveSteps;
+
+  let intro;
+  const sections = [];
+  if (autoCommit && autoMoveTask) {
+    intro = `Работа реально завершена — делаешь коммит, пуш и переносишь задачу в «На тестировании».`;
+    if (tracker === 'trello') {
+      intro += `\n\nДля коммита ID задачи — shortLink из URL карточки ${taskUrl}: кусок между \`/c/\` и следующим \`/\`.`;
+    }
+    sections.push(commitSteps, moveSteps);
+  } else if (autoCommit) {
+    intro = `Работа реально завершена — делаешь коммит и пуш. Задачу в трекере НЕ переноси, разработчик сделает это сам.`;
+    if (tracker === 'trello') {
+      intro += `\n\nДля коммита ID задачи — shortLink из URL карточки ${taskUrl}: кусок между \`/c/\` и следующим \`/\`.`;
+    }
+    sections.push(commitSteps);
+  } else {
+    // !autoCommit && autoMoveTask
+    intro = `Работа реально завершена. Коммит и пуш НЕ делай — это сделает разработчик. После того как опишешь что сделано — перенеси задачу в «На тестировании».`;
+    sections.push(moveSteps);
+  }
+
+  return `${intro}
+
+${sections.join('\n\n')}
 
 ${notReadyGuard}`;
 }
 
-function getSpecialistFromCache(projectPath, taskId) {
+// Каждая задача получает свой git worktree — несколько Claude могут работать параллельно,
+// не перебивая рабочую копию друг друга. .git общий, дублируются только файлы рабочего дерева.
+function worktreePath(projectPath, taskId) {
+  const parent = path.dirname(projectPath);
+  const base = path.basename(projectPath);
+  return path.join(parent, `${base}-ai-worktrees`, taskId);
+}
+
+function resolveDefaultBranch(projectPath) {
+  try {
+    const head = execSync('git symbolic-ref refs/remotes/origin/HEAD', {
+      cwd: projectPath,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return head.replace(/^refs\/remotes\/origin\//, '');
+  } catch {
+    for (const candidate of ['main', 'master']) {
+      try {
+        execSync(`git show-ref --verify --quiet refs/heads/${candidate}`, {
+          cwd: projectPath,
+          stdio: 'ignore',
+        });
+        return candidate;
+      } catch {}
+    }
+    return 'main';
+  }
+}
+
+function branchExists(projectPath, name) {
+  try {
+    execSync(`git show-ref --verify --quiet refs/heads/${name}`, {
+      cwd: projectPath,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureWorktree(projectPath, taskId) {
+  const wt = worktreePath(projectPath, taskId);
+  if (existsSync(wt)) return wt;
+
+  // Чистим мёртвые записи прошлых worktree (если папки нет, но git о них помнит)
+  try {
+    execSync('git worktree prune', { cwd: projectPath, stdio: 'ignore' });
+  } catch {}
+
+  mkdirSync(path.dirname(wt), { recursive: true });
+
+  const defaultBranch = resolveDefaultBranch(projectPath);
+  const cmd = branchExists(projectPath, taskId)
+    ? `git worktree add ${shQuote(wt)} ${shQuote(taskId)}`
+    : `git worktree add -b ${shQuote(taskId)} ${shQuote(wt)} ${shQuote(defaultBranch)}`;
+  execSync(cmd, { cwd: projectPath, stdio: 'pipe' });
+  return wt;
+}
+
+function readAnalysis(projectPath, taskId) {
   const p = taskAnalysisPath(projectPath, taskId);
   if (!existsSync(p)) return null;
-  const content = readFileSync(p, 'utf8');
+  return readFileSync(p, 'utf8');
+}
+
+function getSpecialistFromCache(projectPath, taskId) {
+  const content = readAnalysis(projectPath, taskId);
+  if (!content) return null;
   const m = content.match(/^\s*(?:[-*]\s*)?Специалист\s*:\s*(frontend|backend|fullstack)\b/im);
   return m ? m[1].toLowerCase() : null;
 }
 
-function rulesForSpecialist(specialist) {
-  if (specialist === 'frontend') return ['frontend.md', 'qa.md', 'commits.md'];
-  if (specialist === 'backend') return ['backend.md', 'qa.md', 'commits.md'];
-  return ['frontend.md', 'backend.md', 'qa.md', 'commits.md']; // fullstack / unknown
+function getComplexityFromCache(projectPath, taskId) {
+  const content = readAnalysis(projectPath, taskId);
+  if (!content) return null;
+  const m = content.match(/^\s*(?:[-*]\s*)?Сложность\s*:\s*(simple|medium|complex)\b/im);
+  return m ? m[1].toLowerCase() : null;
 }
 
-function readTask({ taskId, taskUrl, projectPath, extraPrompt, tracker, youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId }) {
+// commits.md нужен всегда — Claude в конце делает коммит/пуш.
+// qa.md — только для medium/complex, на простые задачи чек-лист избыточен.
+function rulesForSpecialist(specialist, complexity) {
+  const base = specialist === 'frontend' ? ['frontend.md']
+             : specialist === 'backend' ? ['backend.md']
+             : ['frontend.md', 'backend.md'];
+  const withQa = complexity === 'simple' ? base : [...base, 'qa.md'];
+  return [...withQa, 'commits.md'];
+}
+
+// Выбор модели по сложности: простые задачи — на дешёвой Haiku, средние — Sonnet,
+// сложные — дефолтная (самая сильная доступная).
+function modelFlagForComplexity(complexity) {
+  if (complexity === 'simple') return '--model haiku';
+  if (complexity === 'medium') return '--model sonnet';
+  return '';
+}
+
+function readTask({ taskId, taskUrl, projectPath, extraPrompt, figmaUrl, tracker, youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId }) {
   const extra = extraPrompt ? `\n\nДоп. инструкции от разработчика: ${extraPrompt}` : '';
   const rules = loadRules(['pm.md']);
   const rulesBlock = rules ? `\n\nПравила PM (строго соблюдай):\n${rules}` : '';
   const analysisFile = taskAnalysisPath(projectPath, taskId);
-  const prompt = `Ты проводишь анализ задачи, код не пишешь.
+  const prompt = `Ты проводишь анализ задачи, код НЕ пишешь. Цель — собрать всё, что нужно следующему запуску, чтобы он сразу начал писать, не исследуя заново.
 
 ${trackerReadNote(tracker, taskUrl)}
 
-Прочитай описание задачи и все комментарии. ${figmaCacheNote(projectPath)}
+Прочитай описание задачи и все комментарии. ${figmaCacheNote(projectPath, figmaUrl)}
 
-Затем коротко изложи:
-1. Что нужно сделать по задаче.
-2. Что говорят в комментариях (особенно тестировщик).
-3. Если есть Figma — что в макете.
-4. Что ты планируешь сделать.
-5. К какой области относится задача: frontend | backend | fullstack.
+Дальше быстро сориентируйся в коде проекта — не читай всё подряд, только:
+- структура папок (\`ls\`, tree на 2 уровня),
+- \`package.json\` / entry-файлы (main, index, App),
+- модули/компоненты, связанные с темой задачи по названиям (grep по ключевым словам из задачи).
 
-В конце сохрани полный анализ в ${analysisFile} (создай директорию если нужно). В конце файла отдельной строкой добавь: \`Специалист: frontend | backend | fullstack\` (ровно одно значение, латиница нижнего регистра) — эту строку потом читает бэкенд дашборда.${extra}${rulesBlock}`;
+Составь анализ в таком виде (разделы ровно в этом порядке):
+
+## 1. Суть задачи
+Короткое изложение того, что надо сделать, с точки зрения пользователя.
+
+## 2. Что говорят в комментариях
+Ключевое из обсуждения. Особенно — последний комментарий тестировщика/проверяющего.
+
+## 3. Figma (если есть)
+Что в макете, какие экраны, поведение. Если макета нет — пропусти раздел.
+
+## 4. План действий
+3-5 буллетов: что делать по шагам. Конкретно, не «разобраться с X» — «вынести fetch в composable, подключить в TaskCard, показать loading-state».
+
+## 5. Ключевые файлы
+Список путей, которые скорее всего будут затронуты. Формат:
+- \`frontend/src/components/TaskCard.vue\` — UI карточки, туда добавляем кнопку.
+- \`backend/server.js\` — роут \`/api/...\`, туда вешаем обработчик.
+
+Путь + 1 строка зачем. 3-10 файлов. Не включай файлы, которые точно не будут меняться (тесты можно упомянуть отдельно если есть).
+
+## 6. Риски и нюансы
+Коротко: что может сломаться, где скрытые зависимости, что стоит проверить после правок. Если нет — «без существенных рисков».
+
+В самом конце файла — две машинно-читаемые строки (их парсит бэкенд дашборда, формат строгий):
+- \`Специалист: frontend | backend | fullstack\` — ровно одно значение, латиница, нижний регистр.
+- \`Сложность: simple | medium | complex\` — одно значение, латиница, нижний регистр.
+
+Критерии сложности:
+- **simple** — 1-3 файла, минимальные изменения (строки, стили, одно состояние, фикс опечатки).
+- **medium** — 3-10 файлов, стандартная фича или баг-фикс со средней глубиной.
+- **complex** — рефакторинг, архитектурные изменения, новая внешняя интеграция, 10+ файлов.
+
+Сохрани анализ в ${analysisFile} (создай директорию если нужно).${extra}${rulesBlock}`;
 
   const env = buildEnv({ youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId });
-  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} --model haiku ${shQuote(prompt)}`;
-  openTerminalWithScript(cmd);
+  // --print: без него claude запускает TUI, который не выходит сам — окно остаётся висеть, autoclose не срабатывает.
+  // --dangerously-skip-permissions: анализ только читает код и пишет в .ai-cache, подтверждать каждый Bash/Read/Write — лишняя возня.
+  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} --print --dangerously-skip-permissions --model haiku ${shQuote(prompt)}`;
+  openTerminalWithScript(cmd, { autoCloseOnSuccess: true });
 }
 
-function writeCode({ taskId, taskUrl, projectPath, extraPrompt, tracker, youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId }) {
+function writeCode({ taskId, taskUrl, projectPath, extraPrompt, figmaUrl, autoCommit = false, autoMoveTask = false, tracker, youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId }) {
   const extra = extraPrompt ? `\n\nДоп. инструкции от разработчика: ${extraPrompt}` : '';
   const specialist = getSpecialistFromCache(projectPath, taskId);
-  const rules = loadRules(rulesForSpecialist(specialist));
+  const complexity = getComplexityFromCache(projectPath, taskId);
+  const rules = loadRules(rulesForSpecialist(specialist, complexity));
   const rulesBlock = rules ? `\n\nПравила разработки (строго соблюдай):\n${rules}` : '';
   const specialistLine = specialist
     ? `Задача помечена как **${specialist}** — работай в соответствии с правилами этой роли.`
     : `Специалист не определён — работай как fullstack.`;
+  const complexityLine = complexity
+    ? `Оценка сложности — **${complexity}**. Не превращай простое в сложное: фикс опечатки не требует переделки архитектуры.`
+    : '';
   const analysisFile = taskAnalysisPath(projectPath, taskId);
+  const hasAnalysis = existsSync(analysisFile);
+  const cwd = ensureWorktree(projectPath, taskId);
 
-  const prompt = `Задача ${taskId}. Ветка — ${taskId}. ${specialistLine}
+  // Если анализ есть — Claude доверяет ему, трекер и Figma повторно не дёргает.
+  // Если нет — старая логика с чтением трекера и Figma-кеша.
+  const taskContextStep = hasAnalysis
+    ? `Прочитай ${analysisFile} — там полный анализ: суть задачи, план действий, ключевые файлы, риски. **Доверяй анализу**: трекер повторно не открывай, Figma повторно не фетчи, комменты не перечитывай. Начинай работу с ключевых файлов из раздела «Ключевые файлы» — не изучай вслепую всю кодовую базу.`
+    : `Анализ заранее не сделан. ${trackerReadNote(tracker, taskUrl)} ${figmaCacheNote(projectPath, figmaUrl)}`;
 
-1. Переключись на ветку ${taskId}. Если её нет — создай от main/master.
-2. Прочитай ${analysisFile} — там готовый анализ задачи. Если файла нет — ${trackerReadNote(tracker, taskUrl)}
-3. ${figmaCacheNote(projectPath)}
-4. Выполни задачу: код, вёрстка, правки — что требуется.
-5. В конце — перечисли что сделал и какие файлы изменил.
-6. ${completionNote(tracker, taskId, taskUrl)}${extra}${rulesBlock}`;
+  const prompt = `Задача ${taskId}. Ветка — ${taskId}. ${specialistLine}${complexityLine ? `\n${complexityLine}` : ''}
+
+1. Ты находишься в изолированной рабочей копии (git worktree) на ветке ${taskId} — ветку переключать НЕ надо, \`git checkout\` не запускай. Основной проект (${projectPath}) живёт своей жизнью и может быть на другой ветке. Рабочая папка — ${cwd}.
+2. ${taskContextStep}
+3. Выполни задачу: код, вёрстка, правки — что требуется. Если нужны зависимости (\`node_modules\` etc.) — установи их внутри worktree или симлинкни из основного проекта.
+4. В конце — перечисли что сделал и какие файлы изменил.
+5. ${completionNote(tracker, taskId, taskUrl, { autoCommit, autoMoveTask })}${extra}${rulesBlock}`;
 
   const env = buildEnv({ youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId });
-  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} ${shQuote(prompt)}`;
+  const modelFlag = modelFlagForComplexity(complexity);
+  const modelPart = modelFlag ? `${modelFlag} ` : '';
+  // --dangerously-skip-permissions: правки идут в изолированный git worktree,
+  // а пуш и перенос задачи в трекере гейтятся отдельными галочками autoCommit/autoMoveTask.
+  // Подтверждать каждый Edit/Bash вручную в N окнах смысла нет.
+  const cmd = `cd ${shQuote(cwd)} && ${env} ${shQuote(claudePath)} --dangerously-skip-permissions ${modelPart}${shQuote(prompt)}`;
   openTerminalWithScript(cmd);
 }
 
@@ -223,8 +406,9 @@ function analyzeProject({ projectPath, youtrackToken, youtrackUrl, figmaToken, t
 Парсер строгий, формат не менять. Задачи из ${dismissedFile} не включай.${rulesBlock}`;
 
   const env = buildEnv({ youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId });
-  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} ${shQuote(prompt)}`;
-  openTerminalWithScript(cmd);
+  // --print + skip-permissions: read-only по коду, пишет в TECH-LEAD.md/.tech-lead-history; без --print TUI висит и autoclose не срабатывает.
+  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} --print --dangerously-skip-permissions ${shQuote(prompt)}`;
+  openTerminalWithScript(cmd, { autoCloseOnSuccess: true });
 }
 
 function pmAnalyze({ projectPath, youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId }) {
@@ -267,8 +451,9 @@ ${historyFile}: резюме, что проверял, дельта, найде�
 Парсер строгий. Задачи из ${dismissedFile} не включай.${rulesBlock}`;
 
   const env = buildEnv({ youtrackToken, youtrackUrl, figmaToken, trelloKey, trelloToken, trelloBoardId });
-  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} ${shQuote(prompt)}`;
-  openTerminalWithScript(cmd);
+  // --print + skip-permissions: read-only по коду, пишет в PM.md/.pm-history; без --print TUI висит и autoclose не срабатывает.
+  const cmd = `cd ${shQuote(projectPath)} && ${env} ${shQuote(claudePath)} --print --dangerously-skip-permissions ${shQuote(prompt)}`;
+  openTerminalWithScript(cmd, { autoCloseOnSuccess: true });
 }
 
 module.exports = { readTask, writeCode, analyzeProject, pmAnalyze, taskAnalysisPath };

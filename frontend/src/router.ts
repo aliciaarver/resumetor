@@ -17,6 +17,11 @@ const routes: RouteRecordRaw[] = [
     name: 'lead',
     component: () => import('./components/TechLeadPanel.vue'),
   },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('./components/SettingsView.vue'),
+  },
 ];
 
 export const router = createRouter({

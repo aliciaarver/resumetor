@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const youtrack = require('./youtrack');
 const trello = require('./trello');
+const gitlab = require('./gitlab');
+const github = require('./github');
 const { readTask, writeCode, analyzeProject, pmAnalyze, taskAnalysisPath } = require('./claude');
 const { readFileSync, existsSync, readdirSync, writeFileSync, unlinkSync } = require('fs');
 const path = require('path');
@@ -91,6 +93,10 @@ function extractTokens(req) {
     trelloKey: req.headers['x-trello-key'] || process.env.TRELLO_KEY,
     trelloToken: req.headers['x-trello-token'] || process.env.TRELLO_TOKEN,
     trelloBoardId: req.headers['x-trello-board-id'] || process.env.TRELLO_BOARD_ID,
+    // Git host (для MR/PR)
+    gitHost: req.headers['x-git-host'] || process.env.GIT_HOST || '',
+    gitToken: req.headers['x-git-token'] || process.env.GIT_TOKEN || '',
+    gitlabUrl: req.headers['x-gitlab-url'] || process.env.GITLAB_URL || '',
     // Shared
     figmaToken: req.headers['x-figma-token'] || process.env.FIGMA_TOKEN,
   };
@@ -129,6 +135,21 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
+app.get('/api/columns', async (req, res) => {
+  try {
+    const t = extractTokens(req);
+    const err = validateTrackerCreds(t, { requireBoard: t.tracker === 'trello' });
+    if (err) return res.status(400).json({ error: err });
+    const columns = t.tracker === 'trello'
+      ? await trello.getColumns(t.trelloKey, t.trelloToken, t.trelloBoardId)
+      : youtrack.getColumns();
+    res.json(columns);
+  } catch (err) {
+    console.error('Error fetching columns:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/tasks/:taskId', async (req, res) => {
   try {
     const t = extractTokens(req);
@@ -142,8 +163,37 @@ app.get('/api/tasks/:taskId', async (req, res) => {
   }
 });
 
+app.get('/api/mrs', async (req, res) => {
+  const { taskId, projectPath } = req.query;
+  if (!taskId || !projectPath) {
+    return res.status(400).json({ error: 'taskId and projectPath are required' });
+  }
+  const t = extractTokens(req);
+  if (!t.gitHost) {
+    return res.status(400).json({ error: 'Хост репозиториев не настроен — задай его в LoginScreen.' });
+  }
+  if (!t.gitToken) {
+    return res.status(400).json({ error: 'Токен Git-хоста не задан.' });
+  }
+  try {
+    let data;
+    if (t.gitHost === 'gitlab') {
+      if (!t.gitlabUrl) return res.status(400).json({ error: 'GitLab URL не задан.' });
+      data = await gitlab.getMrsForBranch({ url: t.gitlabUrl, token: t.gitToken, projectPath, branch: taskId });
+    } else if (t.gitHost === 'github') {
+      data = await github.getPrsForBranch({ token: t.gitToken, projectPath, branch: taskId });
+    } else {
+      return res.status(400).json({ error: `Неизвестный gitHost: ${t.gitHost}` });
+    }
+    res.json({ ...data, host: t.gitHost });
+  } catch (err) {
+    console.error('Error fetching MRs:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/read-task', (req, res) => {
-  const { taskId, taskUrl, projectPath, extraPrompt } = req.body;
+  const { taskId, taskUrl, projectPath, extraPrompt, figmaUrl } = req.body;
   if (!taskId || !taskUrl || !projectPath) {
     return res.status(400).json({ error: 'taskId, taskUrl, projectPath are required' });
   }
@@ -152,7 +202,7 @@ app.post('/api/read-task', (req, res) => {
   if (existsSync(analysisFile)) {
     try { unlinkSync(analysisFile); } catch (e) { console.warn('failed to remove old analysis:', e.message); }
   }
-  readTask({ taskId, taskUrl, projectPath, extraPrompt, ...t });
+  readTask({ taskId, taskUrl, projectPath, extraPrompt, figmaUrl, ...t });
   res.json({ success: true });
 });
 
@@ -174,12 +224,18 @@ app.get('/api/task-analysis/:taskId/content', (req, res) => {
 });
 
 app.post('/api/write-code', (req, res) => {
-  const { taskId, taskUrl, projectPath, extraPrompt } = req.body;
+  const { taskId, taskUrl, projectPath, extraPrompt, figmaUrl, autoCommit, autoMoveTask } = req.body;
   if (!taskId || !taskUrl || !projectPath) {
     return res.status(400).json({ error: 'taskId, taskUrl, projectPath are required' });
   }
   const t = extractTokens(req);
-  writeCode({ taskId, taskUrl, projectPath, extraPrompt, ...t });
+  try {
+    writeCode({ taskId, taskUrl, projectPath, extraPrompt, figmaUrl, autoCommit: !!autoCommit, autoMoveTask: !!autoMoveTask, ...t });
+  } catch (err) {
+    const msg = err.stderr?.toString().trim() || err.message;
+    console.error('write-code failed:', msg);
+    return res.status(500).json({ error: `Не удалось подготовить worktree: ${msg}` });
+  }
   res.json({ success: true });
 });
 

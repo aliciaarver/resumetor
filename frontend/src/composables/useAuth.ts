@@ -1,11 +1,13 @@
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { useProjects, emptyCreds } from './useProjects';
 
 export type TrackerType = 'youtrack' | 'trello';
+export type GitHost = 'github' | 'gitlab' | '';
+export type Role = 'pm' | 'lead';
 
 export interface Credentials {
   tracker: TrackerType;
   figmaToken: string;
-  figmaUrl: string;
   repoPath: string;
   // YouTrack
   youtrackToken: string;
@@ -14,84 +16,70 @@ export interface Credentials {
   trelloKey: string;
   trelloToken: string;
   trelloBoardId: string;
+  // Git host (для MR/PR)
+  gitHost: GitHost;
+  githubToken: string;
+  gitlabToken: string;
+  gitlabUrl: string;
+  // Включённые роли (PM, Tech Lead). Дефолт — пусто.
+  roles: Role[];
+  // Список колонок для отображения на доске. Пусто = показывать все.
+  columns: string[];
 }
 
-export interface LoginParams extends Omit<Credentials, never> {
+export interface LoginParams extends Credentials {
   remember: boolean;
+  // Имя проекта при логине; если пусто — выводим из repoPath или ставим «Проект 1».
+  projectName?: string;
 }
 
-const KEYS = {
-  tracker: 'tracker',
-  figma: 'figma_token',
-  figmaUrl: 'figma_url',
-  repoPath: 'repo_path',
-  ytToken: 'yt_token',
-  ytUrl: 'yt_url',
-  trelloKey: 'trello_key',
-  trelloToken: 'trello_token',
-  trelloBoardId: 'trello_board_id',
-} as const;
-
-function load(): Credentials | null {
-  for (const s of [localStorage, sessionStorage]) {
-    const tracker = s.getItem(KEYS.tracker) as TrackerType | null;
-    if (!tracker) continue;
-
-    if (tracker === 'youtrack' && s.getItem(KEYS.ytToken)) {
-      return {
-        tracker,
-        figmaToken: s.getItem(KEYS.figma) ?? '',
-        figmaUrl: s.getItem(KEYS.figmaUrl) ?? '',
-        repoPath: s.getItem(KEYS.repoPath) ?? '',
-        youtrackToken: s.getItem(KEYS.ytToken) ?? '',
-        youtrackUrl: s.getItem(KEYS.ytUrl) ?? '',
-        trelloKey: '', trelloToken: '', trelloBoardId: '',
-      };
-    }
-    if (tracker === 'trello' && s.getItem(KEYS.trelloKey)) {
-      return {
-        tracker,
-        figmaToken: s.getItem(KEYS.figma) ?? '',
-        figmaUrl: s.getItem(KEYS.figmaUrl) ?? '',
-        repoPath: s.getItem(KEYS.repoPath) ?? '',
-        youtrackToken: '', youtrackUrl: '',
-        trelloKey: s.getItem(KEYS.trelloKey) ?? '',
-        trelloToken: s.getItem(KEYS.trelloToken) ?? '',
-        trelloBoardId: s.getItem(KEYS.trelloBoardId) ?? '',
-      };
-    }
-  }
-  return null;
-}
-
-const credentials = ref<Credentials | null>(load());
+const VALID_ROLES: Role[] = ['pm', 'lead'];
 
 export function useAuth() {
+  const {
+    activeProject,
+    addProject,
+    updateActiveCredentials,
+    patchActiveCredentials,
+    clearAll,
+    deriveDefaultName,
+  } = useProjects();
+
+  // Для совместимости: credentials остаётся как ref<Credentials | null>, но теперь
+  // это computed на основе активного проекта. Все компоненты читают .value.* как раньше.
+  const credentials = computed<Credentials | null>(
+    () => activeProject.value?.credentials ?? null
+  );
+
   function login(params: LoginParams) {
-    const s = params.remember ? localStorage : sessionStorage;
-    s.setItem(KEYS.tracker, params.tracker);
-    s.setItem(KEYS.figma, params.figmaToken);
-    s.setItem(KEYS.figmaUrl, params.figmaUrl);
-    s.setItem(KEYS.repoPath, params.repoPath);
-    s.setItem(KEYS.ytToken, params.youtrackToken);
-    s.setItem(KEYS.ytUrl, params.youtrackUrl);
-    s.setItem(KEYS.trelloKey, params.trelloKey);
-    s.setItem(KEYS.trelloToken, params.trelloToken);
-    s.setItem(KEYS.trelloBoardId, params.trelloBoardId);
-    const { remember: _, ...rest } = params;
-    credentials.value = rest;
+    // Игнорируем remember — теперь проекты живут в localStorage всегда.
+    const { remember: _r, projectName, ...creds } = params;
+    const name = (projectName ?? '').trim() || deriveDefaultName(creds.repoPath);
+    addProject(name, creds);
+  }
+
+  function updateCredentials(params: Credentials) {
+    updateActiveCredentials({ ...params });
+  }
+
+  function setRoles(roles: Role[]) {
+    if (!activeProject.value) return;
+    const valid = roles.filter((r) => VALID_ROLES.includes(r));
+    patchActiveCredentials({ roles: valid });
   }
 
   function logout() {
-    [localStorage, sessionStorage].forEach(s =>
-      Object.values(KEYS).forEach(k => s.removeItem(k))
-    );
-    credentials.value = null;
+    clearAll();
   }
 
   function authHeaders(): Record<string, string> {
     if (!credentials.value) return {};
     const c = credentials.value;
+    const activeGitToken = c.gitHost === 'github'
+      ? c.githubToken
+      : c.gitHost === 'gitlab'
+        ? c.gitlabToken
+        : '';
     return {
       'X-Tracker': c.tracker,
       'X-YouTrack-Token': c.youtrackToken,
@@ -100,8 +88,40 @@ export function useAuth() {
       'X-Trello-Key': c.trelloKey,
       'X-Trello-Token': c.trelloToken,
       'X-Trello-Board-Id': c.trelloBoardId,
+      'X-Git-Host': c.gitHost,
+      'X-Git-Token': activeGitToken,
+      'X-Gitlab-Url': c.gitlabUrl,
     };
   }
 
-  return { credentials, login, logout, authHeaders };
+  return { credentials, login, logout, authHeaders, setRoles, updateCredentials };
+}
+
+// Для случаев, когда нужно сделать пустые креды (например для нового проекта).
+export { emptyCreds };
+
+// Снимает потенциально устаревшие поля неактивного трекера и git-хоста.
+// Если пользователь сначала ввёл YouTrack-токен, потом переключился на Trello —
+// при сохранении YouTrack-токен очищается. Аналогично для GitHub vs GitLab —
+// токен и URL чужого хоста зануляются.
+export function normalizeCreds(input: Credentials): Credentials {
+  const trim = (s: string) => (s ?? '').trim();
+  const isYt = input.tracker === 'youtrack';
+  const isTrello = input.tracker === 'trello';
+  return {
+    tracker: input.tracker,
+    figmaToken: trim(input.figmaToken),
+    repoPath: trim(input.repoPath),
+    youtrackUrl: isYt ? trim(input.youtrackUrl) : '',
+    youtrackToken: isYt ? trim(input.youtrackToken) : '',
+    trelloKey: isTrello ? trim(input.trelloKey) : '',
+    trelloToken: isTrello ? trim(input.trelloToken) : '',
+    trelloBoardId: isTrello ? trim(input.trelloBoardId) : '',
+    gitHost: input.gitHost,
+    githubToken: input.gitHost === 'github' ? trim(input.githubToken) : '',
+    gitlabToken: input.gitHost === 'gitlab' ? trim(input.gitlabToken) : '',
+    gitlabUrl: input.gitHost === 'gitlab' ? trim(input.gitlabUrl) : '',
+    roles: [...(input.roles ?? [])],
+    columns: [...(input.columns ?? [])],
+  };
 }

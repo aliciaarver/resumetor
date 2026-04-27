@@ -2,6 +2,8 @@ const axios = require('axios');
 
 const BASE = 'https://api.trello.com/1';
 
+// Известные маппинги: оригинальное имя листа → удобочитаемый статус.
+// Если список не совпадает — используем его оригинальное имя как есть.
 const LIST_STATUS_MAP = {
   'in progress': 'В работе',
   'в работе': 'В работе',
@@ -23,10 +25,15 @@ const LIST_STATUS_MAP = {
   'выполнено': 'Готово',
 };
 
-const ACTIVE = new Set(['В работе', 'На доработку', 'Тестирование', 'Готово']);
+// Листы, в которых показываем все карточки (не только свои): todo/backlog-подобные.
+const BACKLOG_KEYWORDS = ['backlog', 'to do', 'todo', 'бэклог', 'в бэклоге', 'queue', 'очередь'];
 
 function mapListName(name) {
-  return LIST_STATUS_MAP[name.toLowerCase().trim()];
+  return LIST_STATUS_MAP[name.toLowerCase().trim()] || name.trim();
+}
+
+function isBacklogList(name) {
+  return BACKLOG_KEYWORDS.some((kw) => name.toLowerCase().includes(kw));
 }
 
 async function getTasks(key, token, boardId) {
@@ -44,12 +51,9 @@ async function getTasks(key, token, boardId) {
 
   for (const list of listsRes.data) {
     const status = mapListName(list.name);
-    if (!status || !ACTIVE.has(status)) continue;
-
-    const isBacklog = status === 'В бэклоге';
+    const showAll = isBacklogList(list.name);
     for (const card of (list.cards || [])) {
-      // В бэклоге показываем весь пул. В «В работе» / «На доработку» — только свои карточки.
-      if (!isBacklog && !card.idMembers.includes(myId)) continue;
+      if (!showAll && !card.idMembers.includes(myId)) continue;
       tasks.push({
         id: card.id,
         title: card.name,
@@ -61,6 +65,18 @@ async function getTasks(key, token, boardId) {
   }
 
   return tasks;
+}
+
+async function getColumns(key, token, boardId) {
+  const k = key || process.env.TRELLO_KEY;
+  const t = token || process.env.TRELLO_TOKEN;
+  const b = boardId || process.env.TRELLO_BOARD_ID;
+
+  const listsRes = await axios.get(`${BASE}/boards/${b}/lists`, {
+    params: { key: k, token: t },
+  });
+
+  return listsRes.data.map((l) => mapListName(l.name));
 }
 
 async function getTaskDetails(cardId, key, token) {
@@ -164,6 +180,7 @@ function findBacklogList(lists) {
 
 module.exports = {
   getTasks,
+  getColumns,
   getTaskDetails,
   resolveBoardId,
   getBoardCards,

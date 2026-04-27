@@ -2,16 +2,65 @@
   <div class="task-card">
     <div class="task-header">
       <a :href="task.url" target="_blank" class="task-id" :title="task.id">{{ task.id }}</a>
-      <button class="btn-detail" @click="openDetail" title="Открыть описание задачи">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        Описание
-      </button>
+      <div class="task-header-actions">
+        <button class="btn-detail" @click="openDetail" title="Открыть описание задачи">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Описание
+        </button>
+        <button
+          v-if="canShowMrs"
+          class="btn-detail"
+          @click="openMrs"
+          :title="`Посмотреть ${mrLabel} в ${hostName}`"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="18" r="3"/>
+            <circle cx="6" cy="6" r="3"/>
+            <path d="M13 6h3a2 2 0 0 1 2 2v7"/>
+            <line x1="6" y1="9" x2="6" y2="21"/>
+          </svg>
+          {{ mrLabel }}
+        </button>
+      </div>
     </div>
     <p class="task-title">{{ task.title }}</p>
+
+    <div class="extra-prompt-wrap">
+      <button class="extra-toggle" @click="showParams = !showParams">
+        <span class="chev chev-sm" :class="{ 'chev-open': showParams }">▶</span>
+        ⚙ Параметры задачи
+        <span v-if="hasRepoOverride" class="param-hint">переопределяет глобальный путь</span>
+        <span v-else-if="!canRunActions" class="param-hint param-hint-warn">путь к репо не задан</span>
+      </button>
+      <template v-if="showParams">
+        <input
+          v-model="taskRepoPath"
+          class="param-input"
+          type="text"
+          :placeholder="globalRepoPath || '/Users/name/projects/my-app'"
+          spellcheck="false"
+        />
+        <input
+          v-model="taskFigmaUrl"
+          class="param-input"
+          type="url"
+          placeholder="Figma URL (необязательно)"
+          spellcheck="false"
+        />
+        <label class="param-check">
+          <input v-model="taskAutoCommit" type="checkbox" />
+          <span>ИИ сам коммитит и пушит</span>
+        </label>
+        <label class="param-check">
+          <input v-model="taskAutoMoveTask" type="checkbox" />
+          <span>ИИ может перенести задачу в трекере</span>
+        </label>
+      </template>
+    </div>
 
     <template v-if="!analysisReady">
       <div class="extra-prompt-wrap">
@@ -38,6 +87,7 @@
         >
           {{ readLabel }}
         </button>
+        <div v-if="actionError" class="action-error">{{ actionError }}</div>
       </div>
     </template>
 
@@ -58,28 +108,10 @@
         >
           {{ writeLabel }}
         </button>
+        <div v-if="actionError" class="action-error">{{ actionError }}</div>
       </div>
     </template>
   </div>
-
-  <!-- Repo path modal -->
-  <Teleport to="body">
-    <div v-if="showModal" class="modal-overlay" @click.self="cancelModal">
-      <div class="modal">
-        <h3>Путь к репозиторию</h3>
-        <input
-          v-model="repoPath"
-          class="modal-input"
-          placeholder="/Users/name/projects/my-app"
-          @keydown.enter="confirmModal"
-        />
-        <div class="modal-buttons">
-          <button class="btn" @click="cancelModal">Отмена</button>
-          <button class="btn btn-primary" @click="confirmModal">Подтвердить</button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
 
   <!-- Task detail modal -->
   <Teleport to="body">
@@ -215,12 +247,102 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- MR/PR modal -->
+  <Teleport to="body">
+    <div v-if="showMrs" class="modal-overlay" @click.self="showMrs = false">
+      <div class="detail-modal">
+        <div class="detail-header">
+          <div class="detail-header-left">
+            <span class="detail-task-id">{{ task.id }} — {{ mrLabel }} из {{ hostName }}</span>
+            <h2 class="detail-title">Выберите комментарии для передачи Claude</h2>
+          </div>
+          <button class="detail-close" @click="showMrs = false">✕</button>
+        </div>
+
+        <div v-if="mrsLoading" class="detail-loading">
+          <span class="spinner" />
+          Загрузка {{ mrLabel }} из {{ hostName }}...
+        </div>
+
+        <div v-else-if="mrsError" class="detail-error">
+          {{ mrsError }}
+        </div>
+
+        <template v-else-if="mrsData">
+          <div v-if="!mrsData.mrs.length" class="detail-section">
+            <div class="detail-empty">
+              Для ветки <code>{{ mrsData.branch }}</code> в проекте <code>{{ mrsData.project }}</code> {{ mrLabel }} не найдены.
+            </div>
+          </div>
+
+          <div v-else class="detail-scroll">
+            <div v-for="entry in mrsData.mrs" :key="entry.mr.iid" class="mr-block">
+              <div class="mr-header">
+                <div class="mr-title-row">
+                  <span class="mr-state" :class="`mr-state--${entry.mr.state}`">{{ mrStateLabel(entry.mr.state) }}</span>
+                  <a :href="entry.mr.url" target="_blank" class="mr-iid">{{ mrPrefix }}{{ entry.mr.iid }}</a>
+                  <span class="mr-title">{{ entry.mr.title }}</span>
+                </div>
+                <div class="mr-meta">
+                  <span>{{ entry.mr.author }}</span>
+                  <span>·</span>
+                  <span>{{ entry.mr.sourceBranch }} → {{ entry.mr.targetBranch }}</span>
+                  <span>·</span>
+                  <span>{{ formatDate(entry.mr.updated) }}</span>
+                </div>
+                <div class="mr-bulk">
+                  <button class="bulk-btn" @click="toggleMrSelection(entry, true)">Выбрать все</button>
+                  <button class="bulk-btn" @click="toggleMrSelection(entry, false)">Снять все</button>
+                </div>
+              </div>
+
+              <div v-if="entry.comments.length" class="mr-comments">
+                <label
+                  v-for="c in entry.comments"
+                  :key="c.id"
+                  class="mr-comment"
+                  :class="{ 'mr-comment--selected': isSelected(c.id) }"
+                >
+                  <input
+                    type="checkbox"
+                    class="mr-checkbox"
+                    :checked="isSelected(c.id)"
+                    @change="toggleComment(c.id)"
+                  />
+                  <div class="mr-comment-body">
+                    <div class="mr-comment-header">
+                      <span class="mr-comment-author">{{ c.author }}</span>
+                      <span class="mr-comment-date">{{ formatDate(c.created) }}</span>
+                      <span v-if="c.resolvable" class="mr-comment-resolved" :class="{ unresolved: !c.resolved }">
+                        {{ c.resolved ? 'resolved' : 'unresolved' }}
+                      </span>
+                    </div>
+                    <div class="mr-comment-text">{{ c.body }}</div>
+                  </div>
+                </label>
+              </div>
+              <div v-else class="detail-empty mr-empty">Комментариев нет</div>
+            </div>
+          </div>
+
+          <div v-if="selectedCount > 0" class="mr-footer">
+            <span class="mr-selected-count">Выбрано: {{ selectedCount }}</span>
+            <button class="btn btn-mr-apply" @click="applySelectedComments">
+              Применить к доп. инструкциям
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import { useAuth } from '../composables/useAuth';
+import { useTaskSettings } from '../composables/useTaskSettings';
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -260,7 +382,34 @@ const emit = defineEmits<{
 }>();
 
 const { credentials, authHeaders } = useAuth();
+const {
+  repoPath: taskRepoPath,
+  figmaUrl: taskFigmaUrl,
+  autoCommit: taskAutoCommit,
+  autoMoveTask: taskAutoMoveTask,
+} = useTaskSettings(props.task.id);
 
+const globalRepoPath = computed(() => credentials.value?.repoPath?.trim() ?? '');
+const effectiveRepoPath = computed(() => taskRepoPath.value.trim() || globalRepoPath.value);
+const effectiveFigmaUrl = computed(() => taskFigmaUrl.value.trim());
+const canRunActions = computed(() => !!effectiveRepoPath.value);
+const hasRepoOverride = computed(() => {
+  const t = taskRepoPath.value.trim();
+  return !!t && !!globalRepoPath.value && t !== globalRepoPath.value;
+});
+
+const showParams = ref(!canRunActions.value);
+
+const gitHost = computed(() => credentials.value?.gitHost ?? '');
+const canShowMrs = computed(() => {
+  if (!gitHost.value || !credentials.value) return false;
+  return gitHost.value === 'github'
+    ? !!credentials.value.githubToken
+    : !!credentials.value.gitlabToken;
+});
+const mrLabel = computed(() => (gitHost.value === 'github' ? 'PR' : 'MR'));
+const mrPrefix = computed(() => (gitHost.value === 'github' ? '#' : '!'));
+const hostName = computed(() => (gitHost.value === 'github' ? 'GitHub' : 'GitLab'));
 
 const readState = ref<'idle' | 'loading' | 'done'>('idle');
 const writeState = ref<'idle' | 'loading' | 'done'>('idle');
@@ -286,16 +435,16 @@ const writeLabel = computed(() => {
 });
 
 const readDisabled = computed(() =>
-  readState.value !== 'idle' || writeState.value !== 'idle' || extraPromptTooShort.value
+  readState.value !== 'idle' || writeState.value !== 'idle' || extraPromptTooShort.value || !canRunActions.value
 );
 
 const writeDisabled = computed(() =>
-  writeState.value !== 'idle' || readState.value !== 'idle'
+  writeState.value !== 'idle' || readState.value !== 'idle' || !canRunActions.value
 );
 
 let analysisPollTimer: ReturnType<typeof setInterval> | null = null;
 
-const projectPathForApi = computed(() => credentials.value?.repoPath?.trim() ?? '');
+const projectPathForApi = computed(() => effectiveRepoPath.value);
 
 async function checkAnalysis(): Promise<boolean> {
   if (!projectPathForApi.value) return false;
@@ -352,38 +501,38 @@ const showRegen = ref(false);
 function handleRegenerate() {
   const hint = regenInput.value.trim();
   if (!hint) return;
+  if (!ensureCanRun()) return;
   regenState.value = 'loading';
-  requirePath((projectPath) => {
-    fetch('/api/read-task', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({
-        taskId: props.task.id,
-        taskUrl: props.task.url,
-        projectPath,
-        extraPrompt: hint,
-        youtrackToken: credentials.value?.youtrackToken,
-        youtrackUrl: credentials.value?.youtrackUrl,
-        figmaToken: credentials.value?.figmaToken,
-      }),
+  fetch('/api/read-task', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({
+      taskId: props.task.id,
+      taskUrl: props.task.url,
+      projectPath: effectiveRepoPath.value,
+      extraPrompt: hint,
+      figmaUrl: effectiveFigmaUrl.value || undefined,
+      youtrackToken: credentials.value?.youtrackToken,
+      youtrackUrl: credentials.value?.youtrackUrl,
+      figmaToken: credentials.value?.figmaToken,
+    }),
+  })
+    .then(() => {
+      analysisReady.value = false;
+      analysisContent.value = '';
+      analysisError.value = '';
+      regenInput.value = '';
+      showAnalysis.value = false;
+      readState.value = 'done';
+      startAnalysisPoll();
     })
-      .then(() => {
-        analysisReady.value = false;
-        analysisContent.value = '';
-        analysisError.value = '';
-        regenInput.value = '';
-        showAnalysis.value = false;
-        readState.value = 'done';
-        startAnalysisPoll();
-      })
-      .catch((err) => {
-        console.error(err);
-        analysisError.value = `Не удалось запустить: ${(err as Error).message}`;
-      })
-      .finally(() => {
-        regenState.value = 'idle';
-      });
-  });
+    .catch((err) => {
+      console.error(err);
+      analysisError.value = `Не удалось запустить: ${(err as Error).message}`;
+    })
+    .finally(() => {
+      regenState.value = 'idle';
+    });
 }
 
 function startAnalysisPoll() {
@@ -404,37 +553,25 @@ function stopAnalysisPoll() {
   }
 }
 
+watch(showParams, (isOpen) => {
+  if (isOpen && !taskRepoPath.value.trim() && globalRepoPath.value) {
+    taskRepoPath.value = globalRepoPath.value;
+  }
+});
+
 onMounted(async () => {
   analysisReady.value = await checkAnalysis();
 });
 
 onUnmounted(stopAnalysisPoll);
 
-const showModal = ref(false);
-const repoPath = ref(credentials.value?.repoPath ?? '');
-let pendingAction: ((path: string) => void) | null = null;
+const actionError = ref('');
 
-function requirePath(action: (path: string) => void) {
-  pendingAction = action;
-  if (repoPath.value.trim()) {
-    action(repoPath.value.trim());
-    return;
-  }
-  showModal.value = true;
-}
-
-function cancelModal() {
-  showModal.value = false;
-  pendingAction = null;
-}
-
-function confirmModal() {
-  if (!repoPath.value.trim()) return;
-  showModal.value = false;
-  if (pendingAction) {
-    pendingAction(repoPath.value.trim());
-    pendingAction = null;
-  }
+function ensureCanRun(): boolean {
+  if (canRunActions.value) return true;
+  showParams.value = true;
+  actionError.value = 'Заполни путь к репо в параметрах задачи';
+  return false;
 }
 
 function callApi(
@@ -442,40 +579,52 @@ function callApi(
   stateRef: ReturnType<typeof ref<'idle' | 'loading' | 'done'>>,
   onDone?: () => void,
 ) {
-  return (projectPath: string) => {
-    stateRef.value = 'loading';
-    fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({
-        taskId: props.task.id,
-        taskUrl: props.task.url,
-        projectPath,
-        extraPrompt: extraPrompt.value.trim() || undefined,
-        youtrackToken: credentials.value?.youtrackToken,
-        youtrackUrl: credentials.value?.youtrackUrl,
-        figmaToken: credentials.value?.figmaToken,
-      }),
+  if (!ensureCanRun()) return;
+  stateRef.value = 'loading';
+  actionError.value = '';
+  fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({
+      taskId: props.task.id,
+      taskUrl: props.task.url,
+      projectPath: effectiveRepoPath.value,
+      extraPrompt: extraPrompt.value.trim() || undefined,
+      figmaUrl: effectiveFigmaUrl.value || undefined,
+      autoCommit: taskAutoCommit.value,
+      autoMoveTask: taskAutoMoveTask.value,
+      youtrackToken: credentials.value?.youtrackToken,
+      youtrackUrl: credentials.value?.youtrackUrl,
+      figmaToken: credentials.value?.figmaToken,
+    }),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body?.error) msg = body.error;
+        } catch {}
+        throw new Error(msg);
+      }
+      stateRef.value = 'done';
+      onDone?.();
     })
-      .then(() => {
-        stateRef.value = 'done';
-        onDone?.();
-      })
-      .catch((err) => {
-        console.error(err);
-        stateRef.value = 'idle';
-      });
-  };
+    .catch((err) => {
+      console.error(err);
+      actionError.value = (err as Error).message;
+      stateRef.value = 'idle';
+    });
 }
 
 function handleRead() {
-  requirePath(callApi('/api/read-task', readState, startAnalysisPoll));
+  callApi('/api/read-task', readState, startAnalysisPoll);
 }
 
 function handleWrite() {
-  requirePath(callApi('/api/write-code', writeState, () => {
+  callApi('/api/write-code', writeState, () => {
     emit('work-started', props.task.id);
-  }));
+  });
 }
 
 // Task detail
@@ -508,12 +657,117 @@ async function openDetail() {
   }
 }
 
-function formatDate(ts: number) {
+function formatDate(ts: number | string) {
   if (!ts) return '';
   return new Date(ts).toLocaleString('ru-RU', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
+}
+
+// MR/PR modal
+interface MrComment {
+  id: number | string;
+  author: string;
+  created: string;
+  body: string;
+  resolvable: boolean;
+  resolved: boolean;
+}
+interface MrEntry {
+  mr: {
+    iid: number;
+    title: string;
+    url: string;
+    state: string;
+    author: string;
+    sourceBranch: string;
+    targetBranch: string;
+    updated: string;
+  };
+  comments: MrComment[];
+}
+interface MrsResponse {
+  project: string;
+  branch: string;
+  mrs: MrEntry[];
+  host: string;
+}
+
+const showMrs = ref(false);
+const mrsLoading = ref(false);
+const mrsError = ref('');
+const mrsData = ref<MrsResponse | null>(null);
+const selectedCommentIds = ref<Set<number | string>>(new Set());
+
+const selectedCount = computed(() => selectedCommentIds.value.size);
+
+function isSelected(id: number | string) {
+  return selectedCommentIds.value.has(id);
+}
+
+function toggleComment(id: number | string) {
+  const next = new Set(selectedCommentIds.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  selectedCommentIds.value = next;
+}
+
+function toggleMrSelection(entry: MrEntry, select: boolean) {
+  const next = new Set(selectedCommentIds.value);
+  for (const c of entry.comments) {
+    if (select) next.add(c.id);
+    else next.delete(c.id);
+  }
+  selectedCommentIds.value = next;
+}
+
+function mrStateLabel(state: string) {
+  const map: Record<string, string> = {
+    opened: 'open', open: 'open', merged: 'merged', closed: 'closed', locked: 'locked',
+  };
+  return map[state] || state;
+}
+
+async function openMrs() {
+  if (!ensureCanRun()) return;
+  showMrs.value = true;
+  mrsLoading.value = true;
+  mrsError.value = '';
+  mrsData.value = null;
+  selectedCommentIds.value = new Set();
+  try {
+    const params = new URLSearchParams({
+      taskId: props.task.id,
+      projectPath: effectiveRepoPath.value,
+    });
+    const res = await fetch(`/api/mrs?${params}`, { headers: authHeaders() });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    mrsData.value = await res.json();
+  } catch (err) {
+    mrsError.value = `Не удалось загрузить ${mrLabel.value}: ${(err as Error).message}`;
+  } finally {
+    mrsLoading.value = false;
+  }
+}
+
+function applySelectedComments() {
+  if (!mrsData.value || selectedCommentIds.value.size === 0) return;
+  const lines = [`Комментарии из ${mrLabel.value}:`];
+  for (const entry of mrsData.value.mrs) {
+    const picked = entry.comments.filter((c) => selectedCommentIds.value.has(c.id));
+    if (!picked.length) continue;
+    lines.push('', `${mrLabel.value} ${mrPrefix.value}${entry.mr.iid} (${entry.mr.title}):`);
+    for (const c of picked) {
+      lines.push(`- [${c.author}, ${formatDate(c.created)}]: ${c.body}`);
+    }
+  }
+  extraPrompt.value = lines.join('\n');
+  showExtra.value = true;
+  showMrs.value = false;
 }
 </script>
 
@@ -533,6 +787,13 @@ function formatDate(ts: number) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.task-header-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .task-id {
@@ -641,11 +902,73 @@ function formatDate(ts: number) {
   color: #45475a;
 }
 
+.param-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #181825;
+  border: 1px solid #45475a;
+  border-radius: 6px;
+  color: #cdd6f4;
+  font-size: 12px;
+  padding: 7px 9px;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.param-input:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+.param-input::placeholder {
+  color: #45475a;
+}
+
+.param-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: #585b70;
+  font-style: italic;
+}
+
+.param-hint-warn {
+  color: #fab387;
+  font-style: normal;
+}
+
+.param-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #cdd6f4;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+
+.param-check input {
+  accent-color: #89b4fa;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .task-actions {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 4px;
+}
+
+.action-error {
+  font-size: 11px;
+  color: #f38ba8;
+  background: #3b1c1c;
+  border: 1px solid #5a2a2a;
+  border-radius: 5px;
+  padding: 6px 8px;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .btn {
@@ -797,57 +1120,6 @@ function formatDate(ts: number) {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-}
-
-.modal {
-  background: #1e1e2e;
-  border: 1px solid #45475a;
-  border-radius: 10px;
-  padding: 24px;
-  width: 380px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.modal h3 {
-  margin: 0;
-  font-size: 15px;
-  color: #cdd6f4;
-}
-
-.modal-input {
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid #45475a;
-  background: #313244;
-  color: #cdd6f4;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.modal-input:focus {
-  outline: none;
-  border-color: #89b4fa;
-}
-
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.btn-primary {
-  background: #89b4fa;
-  color: #1e1e2e;
-  border-color: #89b4fa;
-  font-weight: 600;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #74c7ec;
-  border-color: #74c7ec;
 }
 
 /* ── detail modal ── */
@@ -1147,5 +1419,181 @@ function formatDate(ts: number) {
 .markdown-body :deep(th) {
   background: #181825;
   color: #a6adc8;
+}
+
+/* ── MR/PR modal ── */
+.mr-block {
+  padding: 16px 24px;
+  border-bottom: 1px solid #313244;
+}
+.mr-block:last-child { border-bottom: none; }
+
+.mr-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mr-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mr-state {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mr-state--opened, .mr-state--open {
+  background: #1a3a2a;
+  color: #a6e3a1;
+  border: 1px solid #a6e3a1;
+}
+.mr-state--merged {
+  background: #2a1a3a;
+  color: #cba6f7;
+  border: 1px solid #cba6f7;
+}
+.mr-state--closed {
+  background: #3a1a1a;
+  color: #f38ba8;
+  border: 1px solid #f38ba8;
+}
+.mr-state--locked {
+  background: #313244;
+  color: #6c7086;
+  border: 1px solid #45475a;
+}
+
+.mr-iid {
+  font-size: 12px;
+  font-weight: 600;
+  color: #89b4fa;
+  text-decoration: none;
+}
+.mr-iid:hover { text-decoration: underline; }
+
+.mr-title { font-size: 13px; color: #cdd6f4; font-weight: 500; }
+
+.mr-meta {
+  font-size: 11px;
+  color: #6c7086;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mr-bulk { display: flex; gap: 6px; margin-top: 4px; }
+
+.bulk-btn {
+  background: none;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  color: #6c7086;
+  font-size: 10px;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.bulk-btn:hover { color: #cdd6f4; border-color: #89b4fa; }
+
+.mr-comments { display: flex; flex-direction: column; gap: 8px; }
+
+.mr-comment {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mr-comment:hover { border-color: #45475a; }
+.mr-comment--selected { border-color: #89b4fa; background: #1a2338; }
+
+.mr-checkbox {
+  flex-shrink: 0;
+  margin-top: 3px;
+  cursor: pointer;
+  accent-color: #89b4fa;
+}
+
+.mr-comment-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+
+.mr-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mr-comment-author { font-size: 12px; font-weight: 600; color: #89b4fa; }
+.mr-comment-date { font-size: 11px; color: #585b70; }
+
+.mr-comment-resolved {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #1a3a2a;
+  color: #a6e3a1;
+  border: 1px solid #a6e3a1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.mr-comment-resolved.unresolved {
+  background: #3a2a1a;
+  color: #fab387;
+  border-color: #fab387;
+}
+
+.mr-comment-text {
+  font-size: 13px;
+  color: #cdd6f4;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mr-empty { padding-left: 0; }
+
+.mr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-top: 1px solid #313244;
+  flex-shrink: 0;
+  background: #1e1e2e;
+}
+
+.mr-selected-count { font-size: 12px; color: #a6adc8; }
+
+.btn-mr-apply {
+  background: #89b4fa;
+  color: #1e1e2e;
+  border-color: #89b4fa;
+  font-weight: 600;
+  text-align: center;
+}
+.btn-mr-apply:hover:not(:disabled) {
+  background: #74c7ec;
+  border-color: #74c7ec;
+}
+
+.detail-empty code {
+  background: #313244;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #cdd6f4;
 }
 </style>

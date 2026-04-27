@@ -103,4 +103,8 @@ async function getTaskDetails(taskId, token, url) {
   };
 }
 
-module.exports = { getTasks, getTaskDetails };
+function getColumns() {
+  return ['В бэклоге', 'На доработку', 'В работе', 'Тестирование', 'Готово'];
+}
+
+module.exports = { getTasks, getTaskDetails, getColumns };
