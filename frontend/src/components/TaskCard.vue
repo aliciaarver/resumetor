@@ -416,10 +416,20 @@ let pendingAction: ((path: string) => void) | null = null;
 
 function requirePath(action: (path: string) => void) {
   pendingAction = action;
-  if (repoPath.value.trim()) {
-    action(repoPath.value.trim());
+  const localPath = repoPath.value.trim();
+  const globalPath = credentials.value?.repoPath?.trim() ?? '';
+
+  if (localPath) {
+    action(localPath);
     return;
   }
+
+  if (globalPath) {
+    repoPath.value = globalPath;
+    action(globalPath);
+    return;
+  }
+
   showModal.value = true;
 }
 
