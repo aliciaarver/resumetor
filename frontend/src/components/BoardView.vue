@@ -58,9 +58,10 @@ const loading = ref(false);
 const error = ref('');
 
 const COLUMNS = [
-  { key: 'wip', label: 'В работе', status: 'В работе' },
   { key: 'rework', label: 'На доработку', status: 'На доработку' },
-  { key: 'backlog', label: 'В бэклоге', status: 'В бэклоге' },
+  { key: 'wip', label: 'В работе', status: 'В работе' },
+  { key: 'testing', label: 'Тестирование', status: 'Тестирование' },
+  { key: 'done', label: 'Готово', status: 'Готово' },
 ] as const;
 
 const columns = computed(() =>
@@ -164,7 +165,7 @@ onUnmounted(stopPoll);
 
 .board {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -193,16 +194,20 @@ onUnmounted(stopPoll);
   text-transform: uppercase;
 }
 
-.column--wip .column-title {
-  color: #a6e3a1;
-}
-
 .column--rework .column-title {
   color: #f38ba8;
 }
 
-.column--backlog .column-title {
-  color: #fab387;
+.column--wip .column-title {
+  color: #a6e3a1;
+}
+
+.column--testing .column-title {
+  color: #89b4fa;
+}
+
+.column--done .column-title {
+  color: #a6adc8;
 }
 
 .column-count {

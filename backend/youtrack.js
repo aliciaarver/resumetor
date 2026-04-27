@@ -2,11 +2,20 @@ const axios = require("axios");
 
 const STATUS_MAP = {
   "In Progress": "В работе",
-  "Open": "В бэклоге",
+  "Open": "В работе",
   "Требует доработок": "На доработку",
+  "Reopened": "На доработку",
+  "Testing": "Тестирование",
+  "Ready for test": "Тестирование",
+  "In Review": "Тестирование",
+  "На тестировании": "Тестирование",
+  "Fixed": "Готово",
+  "Verified": "Готово",
+  "Done": "Готово",
+  "Closed": "Готово",
 };
 
-const ACTIVE = new Set(["В работе", "На доработку", "В бэклоге"]);
+const ACTIVE = new Set(["В работе", "На доработку", "Тестирование", "Готово"]);
 
 async function getTasks(token, url) {
   const YOUTRACK_TOKEN = token || process.env.YOUTRACK_TOKEN;
