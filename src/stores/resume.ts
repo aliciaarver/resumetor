@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import type { Locale } from '@/types/i18n'
 import {
   buildHydratedResumeData,
@@ -14,6 +15,18 @@ import {
   type Skill,
   type Project,
 } from '@/entities/resume'
+
+const STORAGE_KEY = 'resumetor:resume:v1'
+
+function loadFromStorage(): ResumeData | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return normalizeResumeData(JSON.parse(raw) as Partial<ResumeData>)
+  } catch {
+    return null
+  }
+}
 
 const buildEmptyWorkExperience = (): WorkExperience => ({
   id: crypto.randomUUID(),
@@ -66,7 +79,14 @@ const buildEmptyProject = (): Project => ({
 })
 
 export const useResumeStore = defineStore('resume', () => {
-  const data = ref<ResumeData>(normalizeResumeData(createDemoResume()))
+  const data = ref<ResumeData>(loadFromStorage() ?? normalizeResumeData(createDemoResume()))
+
+  const persistData = useDebounceFn(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.value))
+  }, 500)
+
+  // Persist on every change; first call happens only after user edits (watch is not immediate)
+  watch(data, persistData, { deep: true })
 
   function addWorkExperience() {
     data.value.workExperience.push(buildEmptyWorkExperience())
@@ -124,6 +144,7 @@ export const useResumeStore = defineStore('resume', () => {
   }
 
   function resetResume(locale?: Locale) {
+    localStorage.removeItem(STORAGE_KEY)
     data.value = createDemoResume(locale)
   }
 
