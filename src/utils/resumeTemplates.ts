@@ -1,7 +1,8 @@
 import type { Component } from 'vue'
 import ResumePreview from '@/components/preview/ResumePreview.vue'
+import ModernResumePreview from '@/components/preview/ModernResumePreview.vue'
 
-export type ResumeTemplateId = 'classic'
+export type ResumeTemplateId = 'classic' | 'modern'
 
 export interface ResumeTemplateDefinition {
   id: ResumeTemplateId
@@ -14,6 +15,11 @@ export const RESUME_TEMPLATES: ResumeTemplateDefinition[] = [
     id: 'classic',
     labelKey: 'builder.templateClassic',
     component: ResumePreview,
+  },
+  {
+    id: 'modern',
+    labelKey: 'builder.templateModern',
+    component: ModernResumePreview,
   },
 ]
 

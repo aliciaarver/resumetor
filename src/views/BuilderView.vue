@@ -81,6 +81,18 @@
     >
         <div class="preview-wrap">
           <div class="preview-actions">
+          <div class="template-picker">
+            <span class="template-picker__label">{{ t('builder.templateLabel') }}</span>
+            <select
+              class="template-picker__select"
+              :value="selectedTemplateId"
+              @change="selectedTemplateId = ($event.target as HTMLSelectElement).value as ResumeTemplateId"
+            >
+              <option v-for="tmpl in RESUME_TEMPLATES" :key="tmpl.id" :value="tmpl.id">
+                {{ t(tmpl.labelKey) }}
+              </option>
+            </select>
+          </div>
           <AppButton variant="primary" :loading="exporting" @click="handleExport">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 3v12M7 11l5 5 5-5M4 21h16" stroke-linecap="round" stroke-linejoin="round"/>
@@ -122,7 +134,7 @@
                   height: `${previewNaturalHeight}px`,
                 }"
               >
-                <ResumePreview ref="previewComponentRef" class="preview-page__content" />
+                <component :is="activeTemplate.component" ref="previewComponentRef" class="preview-page__content" />
               </div>
             </div>
           </div>
@@ -149,7 +161,7 @@ import {
   measurePagedLayout,
 } from '@/utils/pagination'
 import PdfMetadataPanel from '@/components/pdf/PdfMetadataPanel.vue'
-import ResumePreview from '@/components/preview/ResumePreview.vue'
+import { RESUME_TEMPLATES, type ResumeTemplateId } from '@/utils/resumeTemplates'
 import ResumeUploader from '@/components/upload/ResumeUploader.vue'
 import PersonalInfoForm from '@/components/form/PersonalInfoForm.vue'
 import AboutMeForm from '@/components/form/AboutMeForm.vue'
@@ -162,6 +174,8 @@ import AppButton from '@/components/ui/AppButton.vue'
 
 const activeTab = ref<'edit' | 'preview'>('edit')
 const showPdfSettings = ref(false)
+const selectedTemplateId = ref<ResumeTemplateId>('classic')
+const activeTemplate = computed(() => RESUME_TEMPLATES.find((t) => t.id === selectedTemplateId.value) ?? RESUME_TEMPLATES[0])
 
 const previewContainerEl = ref<HTMLElement | null>(null)
 const previewComponentRef = ref<{ el: HTMLElement | null } | null>(null)
