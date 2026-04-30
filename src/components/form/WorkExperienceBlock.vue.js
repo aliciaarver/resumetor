@@ -1,15 +1,35 @@
 /// <reference types="../../../../../../../.npm/_npx/2db181330ea4b15b/node_modules/@vue/language-core/types/template-helpers.d.ts" />
 /// <reference types="../../../../../../../.npm/_npx/2db181330ea4b15b/node_modules/@vue/language-core/types/props-fallback.d.ts" />
 import { computed, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useLocaleStore } from '@/stores/locale';
 import AppInput from '@/components/ui/AppInput.vue';
 import AppMonthField from '@/components/ui/AppMonthField.vue';
 import AppTextarea from '@/components/ui/AppTextarea.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import WritingHint from '@/components/ui/WritingHint.vue';
 const props = defineProps();
 const __VLS_emit = defineEmits();
 const localeStore = useLocaleStore();
 const { t } = localeStore;
+const { locale } = storeToRefs(localeStore);
+const WORK_CHECKLIST = {
+    ru: [
+        'Начинайте с глагола действия (разрабатывал, оптимизировал, внедрил)',
+        'Добавьте измеримый результат: цифры, %, сроки',
+        'Укажите технологии, релевантные вакансии',
+        'Описывайте зону ответственности, а не только задачи',
+        'Оптимальная длина: 3–6 предложений',
+    ],
+    en: [
+        'Start with an action verb (developed, optimized, implemented)',
+        'Add a measurable result: numbers, %, timeframe',
+        'Name the technologies relevant to the role',
+        'Describe scope of responsibility, not just tasks',
+        'Ideal length: 3–6 sentences',
+    ],
+};
+const workChecklist = computed(() => WORK_CHECKLIST[locale.value] ?? WORK_CHECKLIST.en);
 const monthPlaceholder = computed(() => t('common.monthPlaceholder'));
 const skillDraft = ref('');
 function onCurrentChange() {
@@ -243,22 +263,36 @@ const __VLS_45 = ({ blur: {} },
     { onBlur: (__VLS_ctx.commitSkills) });
 var __VLS_41;
 var __VLS_42;
-const __VLS_46 = AppTextarea;
+const __VLS_46 = WritingHint;
 // @ts-ignore
 const __VLS_47 = __VLS_asFunctionalComponent1(__VLS_46, new __VLS_46({
+    fieldValue: (__VLS_ctx.exp.description),
+    title: (__VLS_ctx.t('form.workDescriptionHintTitle')),
+    example: (__VLS_ctx.t('form.workDescriptionHintExample')),
+    checklist: (__VLS_ctx.workChecklist),
+}));
+const __VLS_48 = __VLS_47({
+    fieldValue: (__VLS_ctx.exp.description),
+    title: (__VLS_ctx.t('form.workDescriptionHintTitle')),
+    example: (__VLS_ctx.t('form.workDescriptionHintExample')),
+    checklist: (__VLS_ctx.workChecklist),
+}, ...__VLS_functionalComponentArgsRest(__VLS_47));
+const __VLS_51 = AppTextarea;
+// @ts-ignore
+const __VLS_52 = __VLS_asFunctionalComponent1(__VLS_51, new __VLS_51({
     modelValue: (__VLS_ctx.exp.description),
     label: (__VLS_ctx.t('form.description')),
     placeholder: (__VLS_ctx.t('form.workDescriptionPlaceholder')),
     rows: (4),
 }));
-const __VLS_48 = __VLS_47({
+const __VLS_53 = __VLS_52({
     modelValue: (__VLS_ctx.exp.description),
     label: (__VLS_ctx.t('form.description')),
     placeholder: (__VLS_ctx.t('form.workDescriptionPlaceholder')),
     rows: (4),
-}, ...__VLS_functionalComponentArgsRest(__VLS_47));
+}, ...__VLS_functionalComponentArgsRest(__VLS_52));
 // @ts-ignore
-[t, t, t, exp, skillDraft, commitSkills, commitSkills,];
+[t, t, t, t, t, exp, exp, skillDraft, commitSkills, commitSkills, workChecklist,];
 const __VLS_export = (await import('vue')).defineComponent({
     __typeEmits: {},
     __typeProps: {},

@@ -138,6 +138,15 @@ const messages: Record<Locale, TranslationDictionary> = {
       linkTypeOther: "Другая ссылка",
       aboutMe: "Обо мне",
       aboutPlaceholder: "Кратко опишите свой опыт и сильные стороны…",
+      aboutHintTitle: "Как написать сильное резюме «О себе»",
+      aboutHintExample:
+        "«Фронтенд-разработчик с 4 годами опыта. Оптимизировал загрузку главной страницы с 4.2 с до 1.1 с, что снизило показатель отказов на 30%. Работал в продуктовых командах до 20 человек в e-commerce и fintech.»",
+      aboutHintChecklist: [
+        "Укажите специализацию и лет опыта",
+        "Добавьте 1–2 конкретных достижения с цифрами",
+        "Упомяните ключевые домены или технологии",
+        "Оптимальная длина: 3–5 предложений",
+      ],
       workExperience: "Опыт работы",
       workExperienceEmpty:
         "Опыт работы пока не добавлен. Нажмите + Добавить, чтобы начать.",
@@ -151,6 +160,16 @@ const messages: Record<Locale, TranslationDictionary> = {
       description: "Описание",
       workDescriptionPlaceholder:
         "Опишите задачи, зону ответственности и результаты…",
+      workDescriptionHintTitle: "Как описать роль, чтобы резюме выделялось",
+      workDescriptionHintExample:
+        "«Разрабатывал REST API на Node.js для сервиса платежей. Сократил время обработки транзакции с 800 мс до 200 мс за счёт кеширования Redis. Участвовал в code review и менторил 2 джунов.»",
+      workDescriptionHintChecklist: [
+        "Начинайте с глагола действия (разрабатывал, оптимизировал, внедрил)",
+        "Добавьте измеримый результат: цифры, %, сроки",
+        "Укажите технологии, релевантные вакансии",
+        "Описывайте зону ответственности, а не только задачи",
+        "Оптимальная длина: 3–6 предложений",
+      ],
       education: "Образование",
       educationEmpty: "Образование пока не добавлено.",
       institution: "Учебное заведение",
@@ -348,6 +367,15 @@ const messages: Record<Locale, TranslationDictionary> = {
       linkTypeOther: "Other link",
       aboutMe: "About Me",
       aboutPlaceholder: "A brief professional summary about yourself…",
+      aboutHintTitle: "How to write a strong summary",
+      aboutHintExample:
+        '"Frontend developer with 4 years of experience. Reduced homepage load time from 4.2 s to 1.1 s, cutting bounce rate by 30%. Worked in product teams of up to 20 people in e-commerce and fintech."',
+      aboutHintChecklist: [
+        "State your specialization and years of experience",
+        "Add 1–2 specific achievements with numbers",
+        "Mention key domains or technologies",
+        "Ideal length: 3–5 sentences",
+      ],
       workExperience: "Work Experience",
       workExperienceEmpty: "No work experience added. Click + Add to start.",
       company: "Company",
@@ -360,6 +388,16 @@ const messages: Record<Locale, TranslationDictionary> = {
       description: "Description",
       workDescriptionPlaceholder:
         "Describe your responsibilities and achievements…",
+      workDescriptionHintTitle: "How to describe your role effectively",
+      workDescriptionHintExample:
+        '"Developed REST API on Node.js for a payment service. Reduced transaction processing time from 800 ms to 200 ms using Redis caching. Participated in code reviews and mentored 2 junior developers."',
+      workDescriptionHintChecklist: [
+        "Start with an action verb (developed, optimized, implemented)",
+        "Add a measurable result: numbers, %, timeframe",
+        "Name the technologies relevant to the role",
+        "Describe scope of responsibility, not just tasks",
+        "Ideal length: 3–6 sentences",
+      ],
       education: "Education",
       educationEmpty: "No education added.",
       institution: "Institution",

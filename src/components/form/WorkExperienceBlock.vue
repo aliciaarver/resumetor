@@ -62,6 +62,12 @@
       />
     </div>
 
+    <WritingHint
+      :field-value="exp.description"
+      :title="t('form.workDescriptionHintTitle')"
+      :example="t('form.workDescriptionHintExample')"
+      :checklist="workChecklist"
+    />
     <AppTextarea
       v-model="exp.description"
       :label="t('form.description')"
@@ -73,17 +79,39 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useLocaleStore } from '@/stores/locale'
 import type { WorkExperience } from '@/types/resume'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppMonthField from '@/components/ui/AppMonthField.vue'
 import AppTextarea from '@/components/ui/AppTextarea.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import WritingHint from '@/components/ui/WritingHint.vue'
 
 const props = defineProps<{ exp: WorkExperience }>()
 defineEmits<{ remove: [] }>()
 const localeStore = useLocaleStore()
 const { t } = localeStore
+const { locale } = storeToRefs(localeStore)
+
+const WORK_CHECKLIST: Record<string, string[]> = {
+  ru: [
+    'Начинайте с глагола действия (разрабатывал, оптимизировал, внедрил)',
+    'Добавьте измеримый результат: цифры, %, сроки',
+    'Укажите технологии, релевантные вакансии',
+    'Описывайте зону ответственности, а не только задачи',
+    'Оптимальная длина: 3–6 предложений',
+  ],
+  en: [
+    'Start with an action verb (developed, optimized, implemented)',
+    'Add a measurable result: numbers, %, timeframe',
+    'Name the technologies relevant to the role',
+    'Describe scope of responsibility, not just tasks',
+    'Ideal length: 3–6 sentences',
+  ],
+}
+
+const workChecklist = computed(() => WORK_CHECKLIST[locale.value] ?? WORK_CHECKLIST.en)
 const monthPlaceholder = computed(() => t('common.monthPlaceholder'))
 const skillDraft = ref('')
 
