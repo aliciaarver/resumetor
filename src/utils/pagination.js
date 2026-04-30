@@ -7,6 +7,7 @@ export function measurePagedLayout(element) {
     if (!element) {
         return {
             height: A4_PX_HEIGHT,
+            tallBlocks: 0,
             pageStarts: [0],
         };
     }
@@ -30,18 +31,23 @@ export function measurePagedLayout(element) {
     if (!blocks.length) {
         return {
             height,
+            tallBlocks: 0,
             pageStarts: Array.from({ length: Math.ceil(height / A4_PX_HEIGHT) }, (_, index) => index * A4_PX_HEIGHT),
         };
     }
     const pageStarts = [0];
     let currentStart = 0;
     let currentLimit = A4_PX_HEIGHT;
+    let tallBlocks = 0;
     blocks.forEach((block, index) => {
         const nextBlock = blocks[index + 1];
         const shouldKeepWithNext = block.kind === 'heading' &&
             !!nextBlock &&
             nextBlock.height < A4_PX_HEIGHT &&
             nextBlock.bottom > currentLimit;
+        if (block.kind === 'item' && block.height >= A4_PX_HEIGHT) {
+            tallBlocks++;
+        }
         const shouldMoveToNextPage = (block.height < A4_PX_HEIGHT && block.bottom > currentLimit && block.top > currentStart) ||
             (shouldKeepWithNext && block.top > currentStart);
         if (shouldMoveToNextPage) {
@@ -61,5 +67,6 @@ export function measurePagedLayout(element) {
     return {
         height,
         pageStarts,
+        tallBlocks,
     };
 }

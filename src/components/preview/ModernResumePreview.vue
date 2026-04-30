@@ -366,6 +366,11 @@ $font-body: 'Inter', system-ui, sans-serif;
     white-space: nowrap;
   }
 
+  [data-page-block-kind="item"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   // ── SECTIONS ─────────────────────────────────────────────
   &__section {
     margin-bottom: 6mm;

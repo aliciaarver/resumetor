@@ -50,6 +50,7 @@ const messages: Record<Locale, TranslationDictionary> = {
       templateClassic: "Классический",
       templateModern: "Современный",
       performanceNotice: "Превью может работать тяжелее обычного: {issues}.",
+      tallBlockWarning: "Один или несколько блоков длиннее страницы — они будут разрезаны при экспорте. Сократите описание.",
       performanceIssue: {
         pageCount: "много страниц",
         documentHeight: "очень длинный документ",
@@ -260,6 +261,7 @@ const messages: Record<Locale, TranslationDictionary> = {
       templateClassic: "Classic",
       templateModern: "Modern",
       performanceNotice: "Preview may feel heavy: {issues}.",
+      tallBlockWarning: "One or more entries are longer than a page and will be cut during export. Please shorten the description.",
       performanceIssue: {
         pageCount: "many pages",
         documentHeight: "very long document",

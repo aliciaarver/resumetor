@@ -7,6 +7,7 @@ export const A4_PX_HEIGHT = A4_MM_HEIGHT * MM_TO_PX
 export interface PagedLayout {
   height: number
   pageStarts: number[]
+  tallBlocks: number
 }
 
 export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
@@ -45,6 +46,7 @@ export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
   if (!blocks.length) {
     return {
       height,
+      tallBlocks: 0,
       pageStarts: Array.from(
         { length: Math.ceil(height / A4_PX_HEIGHT) },
         (_, index) => index * A4_PX_HEIGHT,
@@ -55,6 +57,7 @@ export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
   const pageStarts = [0]
   let currentStart = 0
   let currentLimit = A4_PX_HEIGHT
+  let tallBlocks = 0
 
   blocks.forEach((block, index) => {
     const nextBlock = blocks[index + 1]
@@ -63,6 +66,10 @@ export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
       !!nextBlock &&
       nextBlock.height < A4_PX_HEIGHT &&
       nextBlock.bottom > currentLimit
+
+    if (block.kind === 'item' && block.height >= A4_PX_HEIGHT) {
+      tallBlocks++
+    }
 
     const shouldMoveToNextPage =
       (block.height < A4_PX_HEIGHT && block.bottom > currentLimit && block.top > currentStart) ||
@@ -87,5 +94,6 @@ export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
   return {
     height,
     pageStarts,
+    tallBlocks,
   }
 }

@@ -109,6 +109,9 @@
           <p v-if="previewPerformanceNotice" class="preview-actions__note" role="status" aria-live="polite">
             {{ previewPerformanceNotice }}
           </p>
+          <p v-if="previewTallBlocks > 0" class="preview-actions__note preview-actions__note--warn" role="status" aria-live="polite">
+            {{ t('builder.tallBlockWarning', { count: previewTallBlocks }) }}
+          </p>
         </div>
 
         <div class="preview-container" ref="previewContainerEl" :aria-label="t('builder.previewRegionLabel')">
@@ -182,6 +185,7 @@ const previewComponentRef = ref<{ el: HTMLElement | null } | null>(null)
 const previewScale = ref(1)
 const previewNaturalHeight = ref(A4_PX_HEIGHT)
 const previewPageStarts = ref([0])
+const previewTallBlocks = ref(0)
 
 useResizeObserver(previewContainerEl, ([entry]) => {
   const containerWidth = entry.contentRect.width
@@ -193,6 +197,7 @@ useResizeObserver(previewEl, ([entry]) => {
   const layout = measurePagedLayout(entry.target as HTMLElement)
   previewNaturalHeight.value = layout.height
   previewPageStarts.value = layout.pageStarts
+  previewTallBlocks.value = layout.tallBlocks
 })
 
 watch(
@@ -201,6 +206,7 @@ watch(
     const layout = measurePagedLayout(element)
     previewNaturalHeight.value = layout.height
     previewPageStarts.value = layout.pageStarts
+    previewTallBlocks.value = layout.tallBlocks
   },
   { immediate: true }
 )
@@ -453,6 +459,10 @@ function confirmReset() {
     margin: 0 0 0 auto;
     font-size: 12px;
     color: $color-text-muted;
+
+    &--warn {
+      color: #b45309;
+    }
   }
 }
 

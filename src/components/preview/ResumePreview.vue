@@ -288,6 +288,11 @@ $font-b:       'Inter', system-ui, sans-serif;
     text-decoration: none;
   }
 
+  [data-page-block-kind="item"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   // ── SECTIONS ─────────────────────────────────────────────
   &__section {
     margin-bottom: 6mm;
