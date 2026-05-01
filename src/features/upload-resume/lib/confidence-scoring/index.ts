@@ -1,6 +1,5 @@
 import type { Education, Language, PersonalInfo, Project, ResumeData, Skill, WorkExperience } from '@/entities/resume/model/types'
-import type { ParseBlockMetrics, ResumeBlockKey } from '@/entities/resume/model/confidence'
-import { buildConfidenceNote, buildPersonalMetrics, toConfidenceLevel, type ParseConfidenceLevel } from '@/entities/resume/model/confidence'
+import { buildConfidenceNote, buildPersonalMetrics, toConfidenceLevel, type ParseConfidenceLevel, type ParseBlockMetrics, type ResumeBlockKey } from '@/entities/resume/model/confidence'
 import type { SectionKey } from '@/features/upload-resume/lib/shared/section-aliases'
 import { average, clamp01, roundScore } from '@/features/upload-resume/lib/shared/text-utils'
 import type { ParseDiff } from '@/utils/parseDiff'

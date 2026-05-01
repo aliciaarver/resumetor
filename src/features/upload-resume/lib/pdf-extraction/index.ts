@@ -1,3 +1,4 @@
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { PdfMetadata, SocialLink } from '@/entities/resume/model/types'
 import { normalizePdfPageText } from '@/utils/pdfTextNormalizer'
 
@@ -48,7 +49,7 @@ export function joinPageTexts(document: ExtractedPdfDocument): string {
   return document.pageTexts.filter(Boolean).join('\n\n').trim()
 }
 
-async function extractHeaderAnnotationLinks(pdf: any): Promise<SocialLink[]> {
+async function extractHeaderAnnotationLinks(pdf: PDFDocumentProxy): Promise<SocialLink[]> {
   if (pdf.numPages < 1) {
     return []
   }
@@ -56,9 +57,9 @@ async function extractHeaderAnnotationLinks(pdf: any): Promise<SocialLink[]> {
   const firstPage = await pdf.getPage(1)
   const annotations = await firstPage.getAnnotations()
   const pageHeight = Array.isArray(firstPage.view) ? firstPage.view[3] : 0
-  const headerLinks = annotations.filter((annotation: any) => {
-    const url = annotation.url || annotation.unsafeUrl
-    const rect = annotation.rect
+  const headerLinks = annotations.filter((annotation: Record<string, unknown>) => {
+    const url = annotation['url'] || annotation['unsafeUrl']
+    const rect = annotation['rect']
 
     return Boolean(
       url &&
@@ -69,7 +70,7 @@ async function extractHeaderAnnotationLinks(pdf: any): Promise<SocialLink[]> {
   })
 
   return headerLinks
-    .map((annotation: any) => annotation.url || annotation.unsafeUrl)
+    .map((annotation: Record<string, unknown>) => (annotation['url'] || annotation['unsafeUrl']) as string)
     .map((url: string) => ({
       id: crypto.randomUUID(),
       label: detectLinkLabel(url),
@@ -86,7 +87,7 @@ function detectLinkLabel(url: string): string {
   return 'Link'
 }
 
-async function extractPdfMetadata(pdf: any): Promise<Partial<PdfMetadata>> {
+async function extractPdfMetadata(pdf: PDFDocumentProxy): Promise<Partial<PdfMetadata>> {
   try {
     const metadata = await pdf.getMetadata()
     const info = metadata?.info ?? {}
