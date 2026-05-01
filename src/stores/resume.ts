@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import type { Locale } from '@/types/i18n'
 import {
   buildHydratedResumeData,
@@ -81,12 +80,21 @@ const buildEmptyProject = (): Project => ({
 export const useResumeStore = defineStore('resume', () => {
   const data = ref<ResumeData>(loadFromStorage() ?? normalizeResumeData(createDemoResume()))
 
-  const persistData = useDebounceFn(() => {
+  let persistTimer: ReturnType<typeof setTimeout> | undefined
+
+  function flushPersist() {
+    clearTimeout(persistTimer)
+    persistTimer = undefined
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data.value))
-  }, 500)
+  }
+
+  function schedulePersist() {
+    clearTimeout(persistTimer)
+    persistTimer = setTimeout(flushPersist, 500)
+  }
 
   // Persist on every change; first call happens only after user edits (watch is not immediate)
-  watch(data, persistData, { deep: true })
+  watch(data, schedulePersist, { deep: true })
 
   function addWorkExperience() {
     data.value.workExperience.push(buildEmptyWorkExperience())
@@ -163,6 +171,7 @@ export const useResumeStore = defineStore('resume', () => {
 
   return {
     data,
+    flushPersist,
     addWorkExperience,
     removeWorkExperience,
     addSocialLink,
