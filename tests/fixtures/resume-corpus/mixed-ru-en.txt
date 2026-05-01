@@ -1,0 +1,28 @@
+Петрова Анна Сергеевна / Anna Petrova
+Full-Stack Developer | Фулстек-разработчик
+anna.petrova@example.com | +7-999-123-4567 | github.com/annapetrova
+Санкт-Петербург / Saint Petersburg
+
+SUMMARY / О СЕБЕ
+6 лет опыта в web-разработке. Работала в международных командах (English daily).
+Frontend: Vue 3, React; Backend: Node.js, Python/FastAPI.
+
+EXPERIENCE / ОПЫТ
+Booking.com — Senior Frontend Developer — 2021–2024 — Amsterdam (remote)
+- Developed Vue 3 components for checkout flow (TypeScript, Pinia)
+- A/B тестирование; увеличение конверсии на 12%
+- Code review, onboarding новых членов команды
+
+Рога и Копыта — Frontend Developer — 2018–2021 — Санкт-Петербург
+- Vue 2 → Vue 3 migration
+- REST API integration; Webpack → Vite migration
+
+EDUCATION / ОБРАЗОВАНИЕ
+СПбГУ — Бакалавр, Информатика — 2018
+Udemy: Vue 3 Advanced (Certificate)
+
+SKILLS / НАВЫКИ
+Vue 3, React, TypeScript, Node.js, Python, PostgreSQL, Docker, Nginx
+
+LANGUAGES / ЯЗЫКИ
+Русский (native), English (C1)

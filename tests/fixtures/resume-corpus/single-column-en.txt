@@ -1,0 +1,25 @@
+John Smith
+Senior Software Engineer
+john.smith@example.com | +1-555-0100 | github.com/johnsmith | linkedin.com/in/johnsmith
+San Francisco, CA
+
+SUMMARY
+Experienced software engineer with 8+ years building scalable distributed systems.
+
+EXPERIENCE
+Google — Senior Software Engineer
+2019 – Present | Mountain View, CA
+- Led migration of core services to microservices architecture
+- Reduced latency by 40% via caching layer redesign
+- Mentored 3 junior engineers
+
+Meta — Software Engineer
+2015 – 2019 | Menlo Park, CA
+- Built data pipeline processing 1M events/day
+- Improved test coverage from 60% to 90%
+
+EDUCATION
+Stanford University — B.S. Computer Science, 2015
+
+SKILLS
+Go, Python, TypeScript, Kubernetes, PostgreSQL, Redis, gRPC
