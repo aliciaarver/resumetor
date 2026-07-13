@@ -14,9 +14,8 @@ import {
 import { HUMAN_LANGUAGE_NAMES, matchProficiency } from '@/features/upload-resume/lib/shared/language-maps'
 import { extractDates, normalizeBirthDate } from '@/features/upload-resume/lib/shared/dates'
 import type { SectionKey } from '@/features/upload-resume/lib/shared/section-aliases'
+import { scoreSkills, scoreWorkEntries } from '@/features/upload-resume/lib/shared/block-scoring'
 import {
-  average,
-  clamp01,
   cleanLine,
   extractEmployerFromDateLine,
   extractRoleTitle,
@@ -772,31 +771,5 @@ function parseLanguagesBlock(lines: string[]): Language[] {
   return results
 }
 
-function scoreWorkEntries(entries: WorkExperience[], rawLines: string[]): number {
-  if (!rawLines.length && !entries.length) return 0
-  if (!entries.length) return 0.2
 
-  const completeness = average(entries.map((entry) => {
-    let score = 0
-    if (entry.company.trim()) score += 0.35
-    if (entry.position.trim()) score += 0.25
-    if (entry.location.trim()) score += 0.1
-    if (entry.fromMonth.trim() || entry.toMonth.trim() || entry.isCurrent) score += 0.25
-    if (entry.description.trim()) score += 0.15
-    if (entry.skills.length) score += 0.1
-    return score
-  }))
-
-  return clamp01(0.2 + Math.min(0.35, entries.length * 0.15) + completeness * 0.45)
-}
-
-function scoreSkills(entries: Skill[], rawLines: string[]): number {
-  if (!rawLines.length && !entries.length) return 0
-  if (!entries.length) return 0.2
-
-  const validSkills = entries.filter((entry) => entry.name.trim().length >= 2)
-  if (!validSkills.length) return 0.2
-
-  return clamp01(0.25 + Math.min(0.45, validSkills.length * 0.08) + (rawLines.length ? 0.2 : 0))
-}
 
