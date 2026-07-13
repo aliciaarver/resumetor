@@ -15,6 +15,7 @@ export function measurePagedLayout(element: HTMLElement | null): PagedLayout {
     return {
       height: A4_PX_HEIGHT,
       pageStarts: [0],
+      tallBlocks: 0,
     }
   }
 

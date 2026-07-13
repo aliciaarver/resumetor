@@ -235,6 +235,7 @@ const previewPerformanceNotice = computed(() => {
   const issues = evaluatePreviewPerformance({
     height: previewNaturalHeight.value,
     pageStarts: previewPageStarts.value,
+    tallBlocks: previewTallBlocks.value,
   })
 
   if (!issues.length) return ''
