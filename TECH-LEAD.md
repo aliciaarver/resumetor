@@ -23,8 +23,9 @@ SPA-конструктор резюме. Полностью клиентский
 | Стили | SCSS, глобально подмешиваются `variables` и `mixins` через `vite.config.ts` |
 | Алиасы | `@/*` → `src/*` |
 | Type-check при сборке | `vue-tsc -b` перед `vite build` |
+| Тесты | Vitest 4 + `@vue/test-utils` + jsdom; `npm test` / `npm run test:watch` |
 
-Не подключено: ESLint, Prettier, stylelint, Vitest, Playwright, precommit-хуки, CI.
+Не подключено: ESLint, Prettier, stylelint, Playwright, precommit-хуки, CI.
 
 ## 3. Архитектура
 
@@ -32,14 +33,15 @@ SPA-конструктор резюме. Полностью клиентский
 
 ```
 App.vue, main.ts, router/
-views/BuilderView.vue           ← единственная страница
+views/BuilderView.vue           ← единственная страница (editor + preview)
+shared/i18n/                    ← словари ru/en
 components/
   form/       PersonalInfo, AboutMe, WorkExperience(+Block), Education,
               Skills, Languages, Projects
-  preview/    ResumePreview (активный), ModernResumePreview (не подключён)
+  preview/    ResumePreview (classic), ModernResumePreview (modern)
   upload/     ResumeUploader, ParseReviewPanel
   pdf/        PdfMetadataPanel
-  ui/         AppButton, AppInput, AppTextarea, AppMonthField
+  ui/         AppButton, AppInput, AppTextarea, AppMonthField, WritingHint
 composables/
   useResumeParser.ts            ← тонкая обёртка над use-case
   usePdfExport.ts               ← html2canvas + jsPDF
@@ -52,7 +54,7 @@ features/upload-resume/
     section-classification/  ← Stage 4: → ClassifiedDocument
     entity-extraction/       ← Stage 5: → ExtractedResumeDraft
     confidence-scoring/      ← Stage 6: → ParseReview
-    shared/                  ← regexes, aliases, language-maps, dates, heuristics, text-utils
+    shared/                  ← regexes, aliases, language-maps, dates, heuristics, text-utils, block-scoring
   model/
     parse-resume-from-pdf.use-case.ts       ← оркестратор 7 стадий
     apply-confidence-fallback.use-case.ts   ← Stage 7: fallback decision
@@ -132,12 +134,12 @@ File (PDF)
 
 ### `utils/socialLinks.ts`
 
-Нормализация и отображение социальных ссылок. Набор типов: `Email | LinkedIn | Telegram | GitHub | Link`. `buildSocialLinkHref` выбирает схему (`mailto:` для Email, `https://` по умолчанию) и пропускает только allow-list безопасных протоколов (`http:`, `https:`, `mailto:`, `tel:`); всё остальное (`javascript:`, `data:`, `vbscript:`, `file:` и т.п.) сбрасывается в пустую строку, включая обфускации с управляющими символами в схеме.
+Нормализация и отображение социальных ссылок. Набор типов: `Email | LinkedIn | Telegram | GitHub | Link`. `buildSocialLinkHref` использует allow-list (`http:`, `https:`, `mailto:`, `tel:`); небезопасные схемы (`javascript:`, `data:`, `vbscript:`, `file:` и т.п.) возвращают пустой `href`, включая обфускации с control chars в схеме. Регрессионные тесты: `src/utils/socialLinks.test.ts`, `tests/socialLinks.test.ts`.
 
 ### `components/preview/`
 
-- `ResumePreview.vue` — активный шаблон (`classic`), подключён в `utils/resumeTemplates.ts`.
-- `ModernResumePreview.vue` — **не зарегистрирован** в `RESUME_TEMPLATES`, UI-переключателя шаблонов в `BuilderView.vue` нет. Переводы `templateModern` лежат в `stores/locale.ts`. Формально мёртвый код / незавершённая фича.
+- `ResumePreview.vue` — шаблон `classic`, зарегистрирован в `utils/resumeTemplates.ts`.
+- `ModernResumePreview.vue` — шаблон `modern`, переключатель в `BuilderView.vue`. Автолинковка в тексте (`renderTextWithLinks`) проходит через тот же `buildSocialLinkHref`.
 
 ## 5. Соглашения
 
@@ -148,13 +150,14 @@ File (PDF)
 - **Стили:** SCSS, `variables` и `mixins` доступны глобально — не импортировать их вручную.
 - **Пагинация:** любые изменения разметки превью должны сохранять разметку `data-page-block` / `data-page-block-kind`, иначе сломается экспорт.
 - **i18n:** ключи через `t('…')` из `stores/locale`; два словаря Ru/En; язык документа синхронизируется сайд-эффектом стора.
-- **PDF-импорт:** `pdfjs-dist` грузим только через `import('pdfjs-dist')` внутри `useResumeParser`, чтобы не утащить worker в main-bundle. `optimizeDeps.exclude` в `vite.config.ts` это подстраховывает.
+- **PDF-импорт:** `pdfjs-dist` грузим только через `import('pdfjs-dist')` внутри pipeline (`lib/pdf-extraction`), чтобы не утащить worker в main-bundle. `optimizeDeps.exclude` в `vite.config.ts` это подстраховывает.
+- **Источник правды в `src/`:** только `.ts` / `.vue`. Transpiled-дубликаты `src/**/*.js` в git запрещены (`.gitignore`); legacy `parseTextToResume` удалён — единственный парсер: `features/upload-resume/`.
 - **Ветка docs:** источник правды по архитектуре — `docs/adr/0001-*.md`; по парсеру — `docs/parser-pipeline.md`; по тестам — `docs/testing-strategy.md`.
 
 ## 6. Окружение
 
 - `node_modules` ставится `npm install` (есть `package-lock.json`).
-- Скрипты: `npm run dev` (Vite dev), `npm run build` (`vue-tsc -b && vite build`), `npm run preview`.
+- Скрипты: `npm run dev` (Vite dev), `npm run build` (`vue-tsc -b && vite build`), `npm run preview`, `npm test`, `npm run test:watch`.
 - Переменные окружения Trello (для фазы генерации задач тех-лидом, не для самого приложения): `TRELLO_KEY`, `TRELLO_TOKEN`, `TRELLO_BOARD_ID`.
 
 ## 7. Известные отклонения от доки и долга
@@ -162,12 +165,10 @@ File (PDF)
 Этот раздел — короткий маркерный список; детали и задачи живут в `.tech-lead-history/*.md` и в трекере.
 
 - Профили парсера в коде (`hh_ru` / `en_cv` / `generic`) не совпадают с `docs/parser-pipeline.md`.
-- `stores/locale.ts` содержит полный словарь Ru/En и доменные мэпперы — противоречит «тонкому стору» из ADR-0001.
-- `BuilderView.vue` совмещает page/widget/feature (ADR-0001 требует разделения).
-- Тестов нет (отсутствует Vitest, фикстур-корпус из `docs/testing-strategy.md`).
-- Нет ESLint / Prettier / CI / precommit-хуков.
-- `ModernResumePreview.vue` существует, но нигде не используется.
-- Ссылки в `README.md` и `docs/README.md` — абсолютные локальные пути с глифом `⛤`, не рабочие ни в гит-хостинге, ни на текущей машине (каталог теперь `xopa/`).
+- `BuilderView.vue` совмещает page/widget/feature (ADR-0001); вынос в `widgets/` отложен до появления второго потребителя или `pages/`-слоя.
+- Fixture-корпус из `docs/testing-strategy.md` не подключён; unit-тесты покрывают pagination, socialLinks, parser pipeline, templates, WritingHint (~51 тест).
+- `ResumePreview.vue` и `ModernResumePreview.vue` — параллельная разметка (~70%); общая логика в `useResumePreviewModel`, унификация секций — в долге.
+- Нет ESLint / Prettier / precommit-хуков.
 
 ## 8. Артефакты
 

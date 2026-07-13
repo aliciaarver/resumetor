@@ -15,10 +15,12 @@ Resume builder on Vue 3 + TypeScript + Vite.
 - `npm run dev` starts the local Vite dev server
 - `npm run build` runs type-checking and production build
 - `npm run preview` serves the built app locally
+- `npm test` runs the Vitest suite once
+- `npm run test:watch` runs Vitest in watch mode
 
 ## Developer Docs
 
-- [Developer Docs](/Users/alicia/Desktop/⛤/resumetor/docs/README.md)
-- [ADR 0001](/Users/alicia/Desktop/⛤/resumetor/docs/adr/0001-architecture-boundaries-and-shared-pagination.md)
-- [Parser Pipeline](/Users/alicia/Desktop/⛤/resumetor/docs/parser-pipeline.md)
-- [Testing Strategy](/Users/alicia/Desktop/⛤/resumetor/docs/testing-strategy.md)
+- [Developer Docs](docs/README.md)
+- [ADR 0001](docs/adr/0001-architecture-boundaries-and-shared-pagination.md)
+- [Parser Pipeline](docs/parser-pipeline.md)
+- [Testing Strategy](docs/testing-strategy.md)

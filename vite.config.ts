@@ -8,6 +8,8 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+    // Prefer .ts over .js so deleted transpiled duplicates cannot shadow sources.
+    extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'],
   },
   css: {
     preprocessorOptions: {
