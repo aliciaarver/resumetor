@@ -177,6 +177,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useResumePreviewModel } from '@/composables/useResumePreviewModel'
+import { buildSocialLinkHref } from '@/utils/socialLinks'
 
 const {
   data,
@@ -189,7 +190,7 @@ const {
   buildLinkHref,
 } = useResumePreviewModel()
 
-const URL_RE = /https?:\/\/[^\s<]+/g
+const URL_RE = /https?:\/\/[^\s<]+/gi
 
 function escapeHtml(value: string): string {
   return value
@@ -201,10 +202,28 @@ function escapeHtml(value: string): string {
 }
 
 function renderTextWithLinks(value: string): string {
-  const escaped = escapeHtml(value)
-  return escaped
-    .replace(URL_RE, (url) => `<a href="${url}" class="modern-resume__text-link" target="_blank" rel="noreferrer">${url}</a>`)
-    .replace(/\n/g, '<br>')
+  const parts: string[] = []
+  let lastIndex = 0
+  const re = new RegExp(URL_RE.source, URL_RE.flags)
+
+  for (let match = re.exec(value); match; match = re.exec(value)) {
+    parts.push(escapeHtml(value.slice(lastIndex, match.index)))
+    const url = match[0]
+    const href = buildSocialLinkHref({ label: 'Link', url })
+
+    if (href) {
+      parts.push(
+        `<a href="${escapeHtml(href)}" class="modern-resume__text-link" target="_blank" rel="noreferrer">${escapeHtml(url)}</a>`,
+      )
+    } else {
+      parts.push(escapeHtml(url))
+    }
+
+    lastIndex = match.index + url.length
+  }
+
+  parts.push(escapeHtml(value.slice(lastIndex)))
+  return parts.join('').replace(/\n/g, '<br>')
 }
 
 const projectEntries = computed(() => data.value.projects.filter((entry) => entry.kind === 'project'))
