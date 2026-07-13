@@ -157,6 +157,16 @@ describe('Type contracts moved to entities/resume', () => {
   it('legacy monolith src/utils/parseTextToResume.ts is removed', async () => {
     const fs = await import('node:fs')
     expect(fs.existsSync('src/utils/parseTextToResume.ts')).toBe(false)
+    expect(fs.existsSync('src/utils/parseTextToResume.js')).toBe(false)
+  })
+
+  it('src has no duplicate .js artifacts tracked in git', async () => {
+    const { execSync } = await import('node:child_process')
+    const tracked = execSync(`git ls-files 'src/**/*.js' 'src/*.js'`, { encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+    expect(tracked).toEqual([])
   })
 })
 

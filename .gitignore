@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Transpiled duplicates — source of truth is .ts / .vue
+src/**/*.js
