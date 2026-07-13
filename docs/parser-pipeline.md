@@ -49,12 +49,15 @@ Responsibility:
 
 - choose a parser profile for the document
 
-Supported profiles:
+Supported profiles (as implemented in `lib/profile-detection`):
 
-- `single-column`
-- `two-column`
-- `dense-corporate`
-- `job-board-export`
+| Profile | When chosen | Typical source |
+| --- | --- | --- |
+| `hh_ru` | Russian job-board markers (`Опыт работы`, `Гражданство`, `Резюме обновлено`, …) | hh.ru and similar RU exports |
+| `en_cv` | English CV headings (`About`, `Skills`, `Experience`, `Education` together) | LinkedIn / classic EN resumes |
+| `generic` | Fallback when no profile-specific markers match | Other single-column PDFs |
+
+> **Note:** older docs and ADR drafts used aspirational layout names (`single-column`, `two-column`, `dense-corporate`, `job-board-export`). Those are not separate runtime profiles today. Layout-specific tuning lives inside stage 4–5 heuristics per `ParserProfile`.
 
 Input:
 
@@ -62,7 +65,7 @@ Input:
 
 Output:
 
-- `ParserProfileDetectionResult`
+- `ParserProfileDetectionResult` (`{ profile: 'hh_ru' | 'en_cv' | 'generic' }`)
 
 ### 4. Section classification
 

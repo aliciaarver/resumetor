@@ -25,7 +25,7 @@ SPA-конструктор резюме. Полностью клиентский
 | Type-check при сборке | `vue-tsc -b` перед `vite build` |
 | Тесты | Vitest 4 + `@vue/test-utils` + jsdom; `npm test` / `npm run test:watch` |
 
-Не подключено: ESLint, Prettier, stylelint, Playwright, precommit-хуки, CI.
+Не подключено: ESLint, Prettier, stylelint, Playwright, precommit-хуки. CI: `.github/workflows/ci.yml` (`npm ci && npm run build && npm test`).
 
 ## 3. Архитектура
 
@@ -116,6 +116,10 @@ File (PDF)
 - **Что декларирует `docs/parser-pipeline.md`:** `single-column` / `two-column` / `dense-corporate` / `job-board-export`. Это рассинхрон доки и кода — один из источников правды устарел, решение тех-лида.
 - Shared-helpers (regexes, aliases, dates, heuristics, text-utils, language-maps) лежат в `lib/shared/` и потребляются стадиями явными именованными импортами.
 
+### `features/upload-resume/lib/pdf-extraction/`
+
+Извлекает текст страниц, header-аннотации и PDF metadata через `pdfjs-dist`. Типизирован через `PDFDocumentProxy` и локальный `PdfLinkAnnotation`; `getDocument` остаётся динамическим `import()`.
+
 ### `utils/pdfTextNormalizer.ts`
 
 Восстанавливает порядок чтения и чинит склейки/разрывы слов из потока `pdfjs-dist`. Это вход парсера.
@@ -126,7 +130,7 @@ File (PDF)
 
 ### `composables/useResumeParser.ts`
 
-Тонкая обёртка над `features/upload-resume/model/parse-resume-from-pdf.use-case.ts` для Vue-стороны: держит ref-ы `parsing`/`error`, достаёт локаль и локализатор из стора и переводит исключения в сообщения. На пути pdfjs-аннотаций в `lib/pdf-extraction` используется `any` для объектов `pdf` / `annotation` — сознательное временное решение.
+Тонкая обёртка над `features/upload-resume/model/parse-resume-from-pdf.use-case.ts` для Vue-стороны: держит ref-ы `parsing`/`error`, достаёт локаль и локализатор из стора и переводит исключения в сообщения.
 
 ### `composables/usePdfExport.ts`
 
@@ -164,7 +168,6 @@ File (PDF)
 
 Этот раздел — короткий маркерный список; детали и задачи живут в `.tech-lead-history/*.md` и в трекере.
 
-- Профили парсера в коде (`hh_ru` / `en_cv` / `generic`) не совпадают с `docs/parser-pipeline.md`.
 - `BuilderView.vue` совмещает page/widget/feature (ADR-0001); вынос в `widgets/` отложен до появления второго потребителя или `pages/`-слоя.
 - Fixture-корпус из `docs/testing-strategy.md` не подключён; unit-тесты покрывают pagination, socialLinks, parser pipeline, templates, WritingHint (~51 тест).
 - `ResumePreview.vue` и `ModernResumePreview.vue` — параллельная разметка (~70%); общая логика в `useResumePreviewModel`, унификация секций — в долге.
