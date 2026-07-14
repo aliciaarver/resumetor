@@ -151,7 +151,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, type CSSProperties } from 'vue'
-import { useResizeObserver } from '@vueuse/core'
+import { useDebounceFn, useResizeObserver } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { usePdfMetaStore } from '@/stores/pdfMeta'
 import { usePdfExport } from '@/composables/usePdfExport'
@@ -193,23 +193,21 @@ useResizeObserver(previewContainerEl, ([entry]) => {
 })
 
 const previewEl = computed(() => previewComponentRef.value?.el ?? null)
-useResizeObserver(previewEl, ([entry]) => {
-  const layout = measurePagedLayout(entry.target as HTMLElement)
+
+function applyPreviewLayout(element: HTMLElement | null) {
+  const layout = measurePagedLayout(element)
   previewNaturalHeight.value = layout.height
   previewPageStarts.value = layout.pageStarts
   previewTallBlocks.value = layout.tallBlocks
+}
+
+const debouncedApplyPreviewLayout = useDebounceFn(applyPreviewLayout, 100)
+
+useResizeObserver(previewEl, ([entry]) => {
+  debouncedApplyPreviewLayout(entry.target as HTMLElement)
 })
 
-watch(
-  previewEl,
-  (element) => {
-    const layout = measurePagedLayout(element)
-    previewNaturalHeight.value = layout.height
-    previewPageStarts.value = layout.pageStarts
-    previewTallBlocks.value = layout.tallBlocks
-  },
-  { immediate: true }
-)
+watch(previewEl, applyPreviewLayout, { immediate: true })
 
 const pageOffsets = computed(() =>
   previewPageStarts.value.map((naturalTop, index) => ({

@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue'
 import type { PdfMetadata } from '@/types/resume'
 import { useLocaleStore } from '@/stores/locale'
-import { evaluateExportPerformance } from '@/utils/performanceBudget'
+import { evaluateExportPerformance, resolveExportScale } from '@/utils/performanceBudget'
 import {
   A4_MM_HEIGHT,
   A4_MM_WIDTH,
@@ -56,8 +56,11 @@ export function usePdfExport(elementRef: Ref<HTMLElement | null>) {
 
       let canvas: HTMLCanvasElement
       try {
+        const layout = measurePagedLayout(clone)
+        const scale = resolveExportScale(naturalWidth, naturalHeight)
+
         canvas = await html2canvas(clone, {
-          scale: 2,
+          scale,
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
@@ -65,12 +68,11 @@ export function usePdfExport(elementRef: Ref<HTMLElement | null>) {
           height: naturalHeight,
         })
 
-        const layout = measurePagedLayout(clone)
         const performanceIssues = evaluateExportPerformance({
           layout,
           width: naturalWidth,
           height: naturalHeight,
-          scale: 2,
+          scale,
         })
         if (performanceIssues.length) {
           console.warn('Resume export is over budget:', performanceIssues)
